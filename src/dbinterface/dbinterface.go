@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	db *sql.DB
+	db        *sql.DB
+	closeChan chan bool
 )
 
 type Person struct {
@@ -204,7 +205,8 @@ func GetGame(id uint) (*Game, error) {
 	return game.game(), nil
 }
 
-func Server() {
+func Open() {
+	closeChan = make(chan bool)
 	var err error
 	db, err = sql.Open("mysql",
 		"root:@tcp(127.0.0.1:3306)/TT2")
@@ -212,22 +214,12 @@ func Server() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
-
-	game, err := GetGame(0)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	_, err = game.Update()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	game.Board.Print()
+	go func() {
+		<-closeChan
+		db.Close()
+	}()
 }
 
-func Tester() {
+func Close() {
+	closeChan <- true
 }
