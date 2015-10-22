@@ -8,6 +8,7 @@ import (
 	// "gopkg.in/mgo.v2/bson"
 	"fmt"
 	"log"
+	"strings"
 )
 
 var (
@@ -122,20 +123,26 @@ func (b *Box) Compress() uint {
 func (b *Box) Print() {
 
 	out := fmt.Sprintf("Owned = %d\n", b.Owned)
+	out += b.String()
 
-	for i := 0; i < 3; i++ {
-		if i != 0 {
-			out += fmt.Sprintln("---------")
-		}
-
-		out += fmt.Sprintf("%d | %d | %d\n", b.Squares[3*i], b.Squares[3*i+1], b.Squares[3*i+2])
-	}
 	// 	1 | 2 | 1
 	// 	---------
 	// 	2 | 1 | 2
 	// 	---------
 	// 	0 | 2 | 3
 	log.Println(out)
+}
+
+func (b *Box) String() string {
+	out := ""
+	for i := 0; i < 3; i++ {
+		if i != 0 {
+			out += fmt.Sprintln(strings.Repeat("-", 9))
+		}
+
+		out += fmt.Sprintf("%d | %d | %d\n", b.Squares[3*i], b.Squares[3*i+1], b.Squares[3*i+2])
+	}
+	return out
 }
 
 func (b *Board) Compress() [9]uint {
@@ -150,6 +157,36 @@ func (b *Board) Decompress(compressed [9]uint) {
 	for i, _ := range compressed {
 		b[i].Decompress(compressed[i])
 	}
+}
+
+func (b *Board) Print() {
+	log.Println("\n" + b.String())
+}
+
+func (b *Board) String() string {
+	out := ""
+	for i := 0; i < 3; i++ {
+		if i != 0 {
+			out += "\n" + fmt.Sprintln(strings.Repeat("-", 37)) + "\n"
+		}
+		for j := 0; j < 3; j++ {
+			if j != 0 {
+				out += fmt.Sprint(strings.Repeat("-", 9)) + "     " + fmt.Sprint(strings.Repeat("-", 9)) + "     " + fmt.Sprint(strings.Repeat("-", 9)) + "\n"
+			}
+
+			line := ""
+
+			for k := 0; k < 3; k++ {
+				if k != 0 {
+					line += "  |  "
+				}
+				line += fmt.Sprintf("%d | %d | %d", b[3*i+k].Squares[3*j], b[3*i+k].Squares[3*j+1], b[3*i+k].Squares[3*j+2])
+			}
+			out += line + "\n"
+
+		}
+	}
+	return out
 }
 
 func GetGame(id uint) (*Game, error) {
@@ -180,53 +217,17 @@ func Server() {
 	game, err := GetGame(0)
 	if err != nil {
 		log.Println(err)
+		return
 	}
-
-	log.Println(game)
-
-	game.Board[0].Squares[0] = 1
-
-	log.Println(game)
 
 	_, err = game.Update()
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
-	b := Box{0, [9]uint{0, 1, 1, 0, 2, 2, 2, 1, 0}}
-	c := Box{}
-
-	compressed := b.Compress()
-	c.Decompress(compressed)
-	b.Print()
-	c.Print()
+	game.Board.Print()
 }
 
 func Tester() {
 }
-
-// func Tester() {
-// 	session, err := mgo.Dial("localhost:27017")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer session.Close()
-
-// 	// Optional. Switch the session to a monotonic behavior.
-// 	session.SetMode(mgo.Monotonic, true)
-
-// 	c := session.DB("test").C("people")
-// 	err = c.Insert(&Person{"Ale", "+55 53 8116 9639"},
-// 		&Person{"Cla", "+55 53 8402 8510"})
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	result := Person{}
-// 	err = c.Find(bson.M{"name": "Ale"}).One(&result)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	fmt.Println("Phone:", result.Phone)
-// }
