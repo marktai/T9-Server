@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	dbinterface.Tester()
+	dbinterface.Server()
 }
