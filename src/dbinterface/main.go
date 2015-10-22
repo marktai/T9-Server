@@ -20,10 +20,10 @@ type Person struct {
 }
 
 type Game struct {
-	ID         uint
-	Players    [2]uint
-	Turn       uint    // 0-19
-	comprBoard [9]uint //0 - 4^10-1
+	ID      uint
+	Players [2]uint
+	Turn    uint  // 0-19
+	Board   Board //0 - 4^10-1
 }
 
 type dbgame struct {
@@ -51,24 +51,43 @@ type Box struct {
 	Squares [9]uint
 }
 
-type Board struct {
-	Boxes [9]*Box
-}
+type Board [9]Box
 
-func (g dbgame) game() *Game {
+func (g *dbgame) game() *Game {
 	players := [2]uint{g.player0, g.player1}
 	comprBoard := [9]uint{g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8}
-	return &Game{g.gameid, players, g.turn, comprBoard}
+	var b Board
+	b.Decompress(comprBoard)
+	return &Game{g.gameid, players, g.turn, b}
 }
 
-func (g *Game) GetBoard() (Board, error) {
-
-	var board Board
-
-	for i, comprBox := range g.comprBoard {
-		board.Boxes[i].Decompress(comprBox)
+func (g *dbgame) update() (sql.Result, error) {
+	err := db.Ping()
+	if err != nil {
+		return nil, err
 	}
-	return board, nil
+
+	updateGame, err := db.Prepare("UPDATE games SET player0=?, player1=?, turn=?, box0=?, box1=?, box2=?, box3=?, box4=?, box5=?, box6=?, box7=?, box8=? WHERE gameid=?")
+
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := updateGame.Exec(g.player0, g.player1, g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.gameid)
+
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+func (g *Game) dbgame() *dbgame {
+	comprBoard := g.Board.Compress()
+	return &dbgame{g.ID, g.Players[0], g.Players[1], g.Turn, comprBoard[0], comprBoard[1], comprBoard[2], comprBoard[3], comprBoard[4], comprBoard[5], comprBoard[6], comprBoard[7], comprBoard[8]}
+}
+
+func (g *Game) Update() (sql.Result, error) {
+	dg := g.dbgame()
+	return dg.update()
 }
 
 func (b *Box) Decompress(compressed uint) error {
@@ -84,7 +103,6 @@ func (b *Box) Decompress(compressed uint) error {
 		compressed >>= 2
 		i--
 	}
-	log.Println(b.Squares)
 	return nil
 }
 
@@ -103,7 +121,7 @@ func (b *Box) Compress() uint {
 
 func (b *Box) Print() {
 
-	out := "\n"
+	out := fmt.Sprintf("Owned = %d\n", b.Owned)
 
 	for i := 0; i < 3; i++ {
 		if i != 0 {
@@ -120,10 +138,23 @@ func (b *Box) Print() {
 	log.Println(out)
 }
 
+func (b *Board) Compress() [9]uint {
+	var comprBoard [9]uint
+	for i, _ := range b {
+		comprBoard[i] = b[i].Compress()
+	}
+	return comprBoard
+}
+
+func (b *Board) Decompress(compressed [9]uint) {
+	for i, _ := range compressed {
+		b[i].Decompress(compressed[i])
+	}
+}
+
 func GetGame(id uint) (*Game, error) {
 	err := db.Ping()
 	if err != nil {
-		// do something here
 		return nil, err
 	}
 
@@ -152,15 +183,22 @@ func Server() {
 	}
 
 	log.Println(game)
-	// game.GetBoard()
 
-	b := &Box{0, [9]uint{0, 1, 1, 0, 2, 2, 2, 1, 0}}
-	b.Print()
+	game.Board[0].Squares[0] = 1
+
+	log.Println(game)
+
+	_, err = game.Update()
+	if err != nil {
+		log.Println(err)
+	}
+
+	b := Box{0, [9]uint{0, 1, 1, 0, 2, 2, 2, 1, 0}}
+	c := Box{}
+
 	compressed := b.Compress()
-	log.Printf("Compressed is %d\n", compressed)
-
-	c := &Box{}
 	c.Decompress(compressed)
+	b.Print()
 	c.Print()
 }
 
