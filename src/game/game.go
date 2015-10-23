@@ -2,19 +2,11 @@ package game
 
 import (
 	"database/sql"
-	// "fmt"
-	_ "github.com/go-sql-driver/mysql"
-	// "gopkg.in/mgo.v2"
-	// "gopkg.in/mgo.v2/bson"
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
 )
-
-// TODO: move to queue
-type MoveHistory [18]uint
 
 type Game struct {
 	GameID      uint
@@ -24,38 +16,6 @@ type Game struct {
 	MoveHistory MoveHistory
 	Started     time.Time
 	Modified    time.Time
-}
-
-func (m *MoveHistory) Decompress(a, b uint64) {
-	compressed := [2]uint64{a, b}
-
-	for i := 0; i < 2; i++ {
-		for moveIndex := 0; moveIndex < 9; moveIndex++ {
-			move := compressed[i] & 0x7F
-			m[moveIndex+9*i] = uint(move)
-			compressed[i] >>= 7
-		}
-	}
-}
-
-func (m *MoveHistory) Compress() (uint64, uint64) {
-	var compressed [2]uint64
-	j := 1
-	for i := 17; i >= 0; i-- {
-		if i == 8 {
-			j -= 1
-		}
-		compressed[j] *= 128
-		compressed[j] += uint64(m[i])
-	}
-	return compressed[0], compressed[1]
-}
-
-func (m *MoveHistory) AddMove(move uint) {
-	for i := 17; i >= 1; i-- {
-		m[i] = m[i-1]
-	}
-	m[0] = move
 }
 
 func symbol(input uint, translate bool) string {
@@ -178,22 +138,9 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 	}
 
 	var g Game
-
-	rand.Seed(time.Now().Unix())
-
-	collision := 1
-	times := 0
-	for collision != 0 {
-
-		g.GameID = uint(rand.Int31n(65536))
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE gameid=?)", g.GameID).Scan(&collision)
-		if err != nil {
-			return nil, err
-		}
-		times++
-		if times > 20 {
-			return nil, errors.New("Too many attempts to find a unique game ID")
-		}
+	g.GameID, err = getUniqueID()
+	if err != nil {
+		return nil, err
 	}
 	g.Players = [2]uint{player0, player1}
 	g.Turn = 9
@@ -201,15 +148,11 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 	g.Modified = time.Now().UTC()
 	g.MoveHistory.AddMove(127)
 
-	addGame, err := db.Prepare("INSERT INTO games VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-
 	if err != nil {
 		return nil, err
 	}
 
-	dg := g.dbgame()
-
-	_, err = addGame.Exec(dg.gameid, dg.player0, dg.player1, dg.turn, dg.box0, dg.box1, dg.box2, dg.box3, dg.box4, dg.box5, dg.box6, dg.box7, dg.box8, dg.movehistory0, dg.movehistory1, dg.started, dg.modified)
+	g.dbgame().upload()
 
 	if err != nil {
 		return nil, err

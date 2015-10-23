@@ -5,7 +5,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	// "gopkg.in/mgo.v2"
 	// "gopkg.in/mgo.v2/bson"
+	"errors"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -32,6 +34,29 @@ type dbgame struct {
 	movehistory1 uint64
 	started      time.Time
 	modified     time.Time
+}
+
+func getUniqueID() (uint, error) {
+
+	rand.Seed(time.Now().Unix())
+
+	collision := 1
+	times := 0
+	var id uint
+
+	for collision != 0 {
+
+		id = uint(rand.Int31n(65536))
+		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE gameid=?)", id).Scan(&collision)
+		if err != nil {
+			return id, err
+		}
+		times++
+		if times > 20 {
+			return id, errors.New("Too many attempts to find a unique game ID")
+		}
+	}
+	return id, nil
 }
 
 func (g *dbgame) game() *Game {
@@ -64,12 +89,17 @@ func (g *dbgame) update() (sql.Result, error) {
 		return nil, err
 	}
 
-	res, err := updateGame.Exec(g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.modified, g.gameid)
+	return updateGame.Exec(g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.modified, g.gameid)
+}
 
+func (g *dbgame) upload() (sql.Result, error) {
+	err := db.Ping()
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+
+	addGame, err := db.Prepare("INSERT INTO games VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	return addGame.Exec(g.gameid, g.player0, g.player1, g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.started, g.modified)
 }
 
 func Open() {
