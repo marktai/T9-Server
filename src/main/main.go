@@ -1,15 +1,15 @@
 package main
 
 import (
-	"dbinterface"
 	"flag"
+	"game"
 	"log"
 )
 
 func main() {
 
-	dbinterface.Open()
-	defer dbinterface.Close()
+	game.Open()
+	defer game.Close()
 
 	Tester()
 
@@ -29,9 +29,9 @@ func Tester() {
 	flag.UintVar(&player, "p", 0, "player")
 	flag.Parse()
 
-	game, err := dbinterface.GetGame(63714)
+	game, err := game.GetGame(63714)
 
-	// game, err := dbinterface.MakeGame(0, 1)
+	// game, err := game.MakeGame(0, 1)
 
 	if err != nil {
 		log.Println(err)
