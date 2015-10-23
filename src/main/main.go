@@ -17,25 +17,33 @@ func main() {
 
 func Tester() {
 
-	var boxNumber int
-	var squareNumber int
-	var newValue uint
+	var boxNumber uint
+	var squareNumber uint
+	var player uint
 
-	flag.IntVar(&boxNumber, "boxNumber", 0, "boxNumber")
-	flag.IntVar(&boxNumber, "b", 0, "boxNumber")
-	flag.IntVar(&squareNumber, "squareNumber", 0, "squareNumber")
-	flag.IntVar(&squareNumber, "s", 0, "squareNumber")
-	flag.UintVar(&newValue, "newValue", 0, "newValue")
-	flag.UintVar(&newValue, "n", 0, "newValue")
+	flag.UintVar(&boxNumber, "boxNumber", 0, "boxNumber")
+	flag.UintVar(&boxNumber, "b", 0, "boxNumber")
+	flag.UintVar(&squareNumber, "squareNumber", 0, "squareNumber")
+	flag.UintVar(&squareNumber, "s", 0, "squareNumber")
+	flag.UintVar(&player, "player", 0, "player")
+	flag.UintVar(&player, "p", 0, "player")
 	flag.Parse()
 
-	game, err := dbinterface.GetGame(0)
+	game, err := dbinterface.GetGame(63714)
+
+	// game, err := dbinterface.MakeGame(0, 1)
+
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	game.Print()
+	err = game.MakeMove(player, boxNumber, squareNumber)
 
-	game.Board[boxNumber].Squares[squareNumber] = newValue
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	_, err = game.Update()
 	if err != nil {
@@ -43,5 +51,5 @@ func Tester() {
 		return
 	}
 
-	game.Board.Print()
+	game.Print()
 }
