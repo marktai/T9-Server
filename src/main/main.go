@@ -4,6 +4,7 @@ import (
 	"flag"
 	"game"
 	"log"
+	"server"
 )
 
 func main() {
@@ -12,6 +13,7 @@ func main() {
 	defer game.Close()
 
 	Tester()
+	server.Run(8080)
 
 }
 

@@ -27,6 +27,14 @@ func (b *Board) Print() {
 
 func (b *Board) String(translate bool) string {
 	out := ""
+	for _, row := range b.StringArray(translate) {
+		out += row + "\n"
+	}
+	return out
+}
+
+func (b *Board) StringArray(translate bool) []string {
+	outArray := make([]string, 0)
 	var retArrays [3][5]string
 
 	boxOfBoxes := b.Box()
@@ -36,9 +44,13 @@ func (b *Board) String(translate bool) string {
 
 		if row != 0 {
 			if boxOfBoxes.Owned == 0 {
-				out += "\n" + strings.Repeat("-", 37) + "\n\n"
+				outArray = append(outArray, (""))
+				outArray = append(outArray, (strings.Repeat("-", 37)))
+				outArray = append(outArray, (""))
 			} else {
-				out += "\n" + strings.Repeat("-", 11) + symbol(boxOfBoxes.Owned, translate) + strings.Repeat("-", 13) + symbol(boxOfBoxes.Owned, translate) + strings.Repeat("-", 13) + "\n\n"
+				outArray = append(outArray, (""))
+				outArray = append(outArray, (strings.Repeat("-", 11) + symbol(boxOfBoxes.Owned, translate) + strings.Repeat("-", 13) + symbol(boxOfBoxes.Owned, translate) + strings.Repeat("-", 13)))
+				outArray = append(outArray, (""))
 			}
 		}
 
@@ -46,10 +58,10 @@ func (b *Board) String(translate bool) string {
 			retArrays[col] = b[3*row+col].StringArray(translate)
 		}
 		for boxRow := 0; boxRow < 5; boxRow++ {
-			out += retArrays[0][boxRow] + "  |  " + retArrays[1][boxRow] + "  |  " + retArrays[2][boxRow] + "\n"
+			outArray = append(outArray, (retArrays[0][boxRow] + "  |  " + retArrays[1][boxRow] + "  |  " + retArrays[2][boxRow]))
 		}
 	}
-	return out
+	return outArray
 }
 
 func (b *Board) Box() *Box {

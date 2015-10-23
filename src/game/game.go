@@ -90,6 +90,18 @@ func (g *Game) MakeMove(player, box, square uint) error {
 
 }
 
+func (g *Game) Info() map[string]interface{} {
+	retMap := make(map[string]interface{})
+	retMap["GameID"] = g.GameID
+	retMap["Players"] = g.Players
+	retMap["Turn"] = g.Turn
+	retMap["Started"] = g.Started
+	retMap["Modified"] = g.Modified
+	retMap["Board"] = g.Board.StringArray(true)
+	retMap["MoveHistory"] = g.MoveHistory
+	return retMap
+}
+
 func (g *Game) Print() {
 	log.Println("GameID:", g.GameID)
 	log.Println("Players:", g.Players)
