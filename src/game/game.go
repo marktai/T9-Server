@@ -97,7 +97,7 @@ func (g *Game) Info() map[string]interface{} {
 	retMap["Turn"] = g.Turn
 	retMap["Started"] = g.Started
 	retMap["Modified"] = g.Modified
-	retMap["Board"] = g.Board.StringArray(true)
+	// retMap["Board"] = g.Board
 	retMap["MoveHistory"] = g.MoveHistory
 	return retMap
 }
@@ -125,6 +125,9 @@ func GetGame(id uint) (*Game, error) {
 	//TODO: handle NULLS
 	err = db.QueryRow("SELECT gameid, player0, player1, turn, box0, box1, box2, box3, box4, box5, box6, box7, box8, movehistory0, movehistory1, started, modified FROM games WHERE gameid=?", id).Scan(&game.gameid, &game.player0, &game.player1, &game.turn, &game.box0, &game.box1, &game.box2, &game.box3, &game.box4, &game.box5, &game.box6, &game.box7, &game.box8, &game.movehistory0, &game.movehistory1, &started, &modified)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("Game not found")
+		}
 		return nil, err
 	}
 	//golang constant thingy

@@ -3,9 +3,11 @@ package server
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	_ "github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"
+	"ws"
 )
 
 func Run(port uint16) {
@@ -13,7 +15,10 @@ func Run(port uint16) {
 	r := mux.NewRouter()
 	r.HandleFunc("/game", makeGame).Methods("POST")
 	r.HandleFunc("/game/{ID}", getGame).Methods("GET")
+	r.HandleFunc("/game/{ID}/info", getGame).Methods("GET")
 	r.HandleFunc("/game/{ID}", makeGameMove).Methods("POST")
+	r.HandleFunc("/game/{ID}/string", getGameString).Methods("GET")
+	r.HandleFunc("/game/{ID}/ws", ws.ServeWs).Methods("GET")
 	//log.Println("Took %s", time.Now().Sub(start))
 	//log.Println(post)
 

@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"ws"
 )
 
 func makeGame(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +22,13 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game, err := game.MakeGame(player1, player2)
-	WriteOutputError(w, map[string]uint{"ID": game.GameID}, err)
+
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	WriteJson(w, genMap("ID", game.GameID))
 }
 
 func getGame(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +40,37 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game, err := game.GetGame(id)
-	WriteOutputError(w, map[string]interface{}{"Game": game.Info()}, err)
+
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	if err == nil {
+		ws.Broadcast(id, []byte("Changed"))
+	}
+	WriteJson(w, genMap("Game", game.Info()))
+}
+
+func getGameString(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := stringtoUint(vars["ID"])
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	game, err := game.GetGame(id)
+
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	if err == nil {
+		ws.Broadcast(id, []byte("Changed"))
+	}
+	WriteJson(w, genMap("Board", game.Board.StringArray(true)))
 }
 
 func makeGameMove(w http.ResponseWriter, r *http.Request) {
@@ -65,12 +102,21 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 
 	game, err := game.GetGame(id)
 
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
 	err = game.MakeMove(player, box, square)
 	if err != nil {
-		WriteError(w, err, 500)
+		WriteError(w, err, 400)
 		return
 	}
 
 	_, err = game.Update()
 	WriteOutputError(w, "Successful", err)
+
+	if err == nil {
+		ws.Broadcast(id, []byte("Changed"))
+	}
 }

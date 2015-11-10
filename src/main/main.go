@@ -11,8 +11,6 @@ func main() {
 
 	game.Open()
 	defer game.Close()
-
-	Tester()
 	server.Run(8080)
 
 }

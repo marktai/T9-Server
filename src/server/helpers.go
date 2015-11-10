@@ -41,3 +41,7 @@ func WriteOutputError(w http.ResponseWriter, input interface{}, err error) {
 	}
 	WriteJson(w, input)
 }
+
+func genMap(key string, value interface{}) map[string]interface{} {
+	return map[string]interface{}{key: value}
+}
