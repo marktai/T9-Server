@@ -8,14 +8,18 @@ import (
 	"time"
 )
 
-type Game struct {
+type GameInfo struct {
 	GameID      uint
 	Players     [2]uint
-	Turn        uint  // 0-19
-	Board       Board //0 - 4^10-1
+	Turn        uint // 0-19
 	MoveHistory MoveHistory
 	Started     time.Time
 	Modified    time.Time
+}
+
+type Game struct {
+	GameInfo
+	Board Board //0 - 4^10-1
 }
 
 func symbol(input uint, translate bool) string {
@@ -90,16 +94,8 @@ func (g *Game) MakeMove(player, box, square uint) error {
 
 }
 
-func (g *Game) Info() map[string]interface{} {
-	retMap := make(map[string]interface{})
-	retMap["GameID"] = g.GameID
-	retMap["Players"] = g.Players
-	retMap["Turn"] = g.Turn
-	retMap["Started"] = g.Started
-	retMap["Modified"] = g.Modified
-	// retMap["Board"] = g.Board
-	retMap["MoveHistory"] = g.MoveHistory
-	return retMap
+func (g *Game) Info() GameInfo {
+	return g.GameInfo
 }
 
 func (g *Game) Print() {

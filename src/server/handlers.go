@@ -49,7 +49,7 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		ws.Broadcast(id, []byte("Changed"))
 	}
-	WriteJson(w, genMap("Game", game.Info()))
+	WriteJson(w, genMap("Game", game.GameInfo))
 }
 
 func getGameString(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,7 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = game.Update()
-	WriteOutputError(w, "Successful", err)
+	WriteOutputError(w, map[string]string{"Output": "Successful"}, err)
 
 	if err == nil {
 		ws.Broadcast(id, []byte("Changed"))
