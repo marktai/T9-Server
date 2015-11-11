@@ -10,7 +10,7 @@ import (
 	"ws"
 )
 
-func Run(port uint16) {
+func Run(port int) {
 	//start := time.Now()
 	r := mux.NewRouter()
 	r.HandleFunc("/games", getAllGames).Methods("GET")
