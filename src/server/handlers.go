@@ -57,9 +57,6 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err == nil {
-		ws.Broadcast(id, []byte("Changed"))
-	}
 	WriteJson(w, genMap("Game", game.GameInfo))
 }
 
@@ -78,9 +75,6 @@ func getGameString(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err == nil {
-		ws.Broadcast(id, []byte("Changed"))
-	}
 	WriteJson(w, genMap("Board", game.Board.StringArray(true)))
 }
 
