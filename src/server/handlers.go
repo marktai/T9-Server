@@ -31,6 +31,17 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, genMap("ID", game.GameID))
 }
 
+func getAllGames(w http.ResponseWriter, r *http.Request) {
+	games, err := game.GetAllGames()
+
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	WriteJson(w, genMap("Games", games))
+}
+
 func getGame(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := stringtoUint(vars["ID"])
@@ -114,7 +125,7 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = game.Update()
-	WriteOutputError(w, map[string]string{"Output": "Successful"}, err)
+	WriteOutputError(w, genMap("Output", "Successful"), err)
 
 	if err == nil {
 		ws.Broadcast(id, []byte("Changed"))

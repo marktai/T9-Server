@@ -172,3 +172,29 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 	return &g, nil
 
 }
+
+func GetAllGames() ([]uint, error) {
+	err := db.Ping()
+	if err != nil {
+		return nil, err
+	} //TODO: handle NULLS
+
+	var ids []uint
+
+	rows, err := db.Query("SELECT gameid FROM games")
+	defer rows.Close()
+	for rows.Next() {
+		var id uint
+		if err := rows.Scan(&id); err != nil {
+			return ids, err
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ids, err
+	}
+
+	return ids, nil
+
+}
