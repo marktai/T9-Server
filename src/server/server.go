@@ -15,6 +15,7 @@ func Run(port int) {
 	r := mux.NewRouter()
 	r.HandleFunc("/login", login).Methods("POST")
 	r.HandleFunc("/users", makeUser).Methods("POST")
+	r.HandleFunc("/users/{userID}/games", getUserGames).Methods("GET")
 	r.HandleFunc("/games", getAllGames).Methods("GET")
 	r.HandleFunc("/games", makeGame).Methods("POST")
 	r.HandleFunc("/games/{ID}", getGame).Methods("GET")

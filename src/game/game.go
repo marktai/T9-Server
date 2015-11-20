@@ -183,7 +183,43 @@ func GetAllGames() ([]uint, error) {
 	var ids []uint
 
 	rows, err := db.Db.Query("SELECT gameid FROM games")
-	defer rows.Close()
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id uint
+		if err := rows.Scan(&id); err != nil {
+			return ids, err
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return ids, err
+	}
+
+	return ids, nil
+
+}
+
+func GetUserGames(userID uint) ([]uint, error) {
+	err := db.Db.Ping()
+	if err != nil {
+		return nil, err
+	} //TODO: handle NULLS
+
+	var ids []uint
+
+	rows, err := db.Db.Query("SELECT gameid FROM games WHERE player0=? OR player1=?", userID, userID)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
 	for rows.Next() {
 		var id uint
 		if err := rows.Scan(&id); err != nil {

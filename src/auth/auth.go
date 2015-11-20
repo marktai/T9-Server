@@ -181,22 +181,10 @@ func checkMAC(message, key string, messageHMAC []byte) bool {
 }
 
 // returns userID, message used to generate HMAC, and HMAC from request
-func parseRequest(r *http.Request) (uint, string, string, []byte, error) {
-
-	playerString := r.FormValue("Player")
-
-	if playerString == "" {
-		return 0, "", "", nil, errors.New("Player Query Value not set")
-	}
-
-	userID, err := stringtoUint(playerString)
-	if err != nil {
-		return 0, "", "", nil, err
-	}
-
+func parseRequest(r *http.Request) (string, string, []byte, error) {
 	timeSlice, ok := r.Header["Time-Sent"]
 	if !ok || timeSlice == nil {
-		return 0, "", "", nil, errors.New("No Time-Sent header provided")
+		return "", "", nil, errors.New("No Time-Sent header provided")
 	}
 
 	time := timeSlice[0]
@@ -205,7 +193,7 @@ func parseRequest(r *http.Request) (uint, string, string, []byte, error) {
 
 	messageHMACSlice, ok := r.Header["Hmac"]
 	if !ok || timeSlice == nil {
-		return 0, "", "", nil, errors.New("No HMAC header provided")
+		return "", "", nil, errors.New("No HMAC header provided")
 	}
 
 	messageHMACString := messageHMACSlice[0]
@@ -233,24 +221,25 @@ func parseRequest(r *http.Request) (uint, string, string, []byte, error) {
 	}
 
 	var messageHMAC []byte
+	var err error
 	switch HMACFormat {
 	case "base64":
 		messageHMAC, err = base64.StdEncoding.DecodeString(messageHMACString)
 	case "hex":
 		messageHMAC, err = hex.DecodeString(messageHMACString)
 	default:
-		return 0, "", "", nil, errors.New("'" + HMACFormat + "' not a supported format")
+		return "", "", nil, errors.New("'" + HMACFormat + "' not a supported format")
 	}
 
 	if err != nil {
-		return 0, "", "", nil, err
+		return "", "", nil, err
 	}
 
-	return userID, message, time, messageHMAC, nil
+	return message, time, messageHMAC, nil
 }
 
-func AuthRequest(r *http.Request) (bool, error) {
-	userID, message, timeString, messageHMAC, err := parseRequest(r)
+func AuthRequest(r *http.Request, userID uint) (bool, error) {
+	message, timeString, messageHMAC, err := parseRequest(r)
 	if err != nil {
 		return false, err
 	}
@@ -264,7 +253,7 @@ func AuthRequest(r *http.Request) (bool, error) {
 	delay := int64(timeInt) - nowMillis
 
 	// rejects if times are more than 10 seconds apart
-	if delay < -10 || delay > 10 {
+	if delay < -60 || delay > 60 {
 		return false, errors.New("Time difference too large")
 	}
 

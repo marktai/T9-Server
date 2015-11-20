@@ -62,7 +62,7 @@ func testHMAC() {
 
 	// log.Println(r)
 
-	authed, err := auth.AuthRequest(r)
+	authed, err := auth.AuthRequest(r, id)
 	if err != nil {
 		log.Println(err)
 		return
