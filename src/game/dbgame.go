@@ -2,18 +2,13 @@ package game
 
 import (
 	"database/sql"
+	"db"
 	_ "github.com/go-sql-driver/mysql"
 	// "gopkg.in/mgo.v2"
 	// "gopkg.in/mgo.v2/bson"
 	"errors"
-	"log"
 	"math/rand"
 	"time"
-)
-
-var (
-	db        *sql.DB
-	closeChan chan bool
 )
 
 type dbgame struct {
@@ -47,7 +42,7 @@ func getUniqueID() (uint, error) {
 	for collision != 0 {
 
 		id = uint(rand.Int31n(65536))
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE gameid=?)", id).Scan(&collision)
+		err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE gameid=?)", id).Scan(&collision)
 		if err != nil {
 			return id, err
 		}
@@ -78,12 +73,12 @@ func (g *dbgame) game() *Game {
 }
 
 func (g *dbgame) update() (sql.Result, error) {
-	err := db.Ping()
+	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
-	updateGame, err := db.Prepare("UPDATE games SET turn=?, box0=?, box1=?, box2=?, box3=?, box4=?, box5=?, box6=?, box7=?, box8=?, movehistory0=?, movehistory1=?, modified=? WHERE gameid=?")
+	updateGame, err := db.Db.Prepare("UPDATE games SET turn=?, box0=?, box1=?, box2=?, box3=?, box4=?, box5=?, box6=?, box7=?, box8=?, movehistory0=?, movehistory1=?, modified=? WHERE gameid=?")
 
 	if err != nil {
 		return nil, err
@@ -93,30 +88,11 @@ func (g *dbgame) update() (sql.Result, error) {
 }
 
 func (g *dbgame) upload() (sql.Result, error) {
-	err := db.Ping()
+	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
-	addGame, err := db.Prepare("INSERT INTO games VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	addGame, err := db.Db.Prepare("INSERT INTO games VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	return addGame.Exec(g.gameid, g.player0, g.player1, g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.started, g.modified)
-}
-
-func Open() {
-	closeChan = make(chan bool)
-	var err error
-	db, err = sql.Open("mysql",
-		"root:@tcp(127.0.0.1:3306)/T9")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	go func() {
-		<-closeChan
-		db.Close()
-	}()
-}
-
-func Close() {
-	closeChan <- true
 }

@@ -2,6 +2,7 @@ package game
 
 import (
 	"database/sql"
+	"db"
 	"errors"
 	"fmt"
 	"log"
@@ -109,7 +110,7 @@ func (g *Game) Print() {
 }
 
 func GetGame(id uint) (*Game, error) {
-	err := db.Ping()
+	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +120,7 @@ func GetGame(id uint) (*Game, error) {
 	var started, modified string
 
 	//TODO: handle NULLS
-	err = db.QueryRow("SELECT gameid, player0, player1, turn, box0, box1, box2, box3, box4, box5, box6, box7, box8, movehistory0, movehistory1, started, modified FROM games WHERE gameid=?", id).Scan(&game.gameid, &game.player0, &game.player1, &game.turn, &game.box0, &game.box1, &game.box2, &game.box3, &game.box4, &game.box5, &game.box6, &game.box7, &game.box8, &game.movehistory0, &game.movehistory1, &started, &modified)
+	err = db.Db.QueryRow("SELECT gameid, player0, player1, turn, box0, box1, box2, box3, box4, box5, box6, box7, box8, movehistory0, movehistory1, started, modified FROM games WHERE gameid=?", id).Scan(&game.gameid, &game.player0, &game.player1, &game.turn, &game.box0, &game.box1, &game.box2, &game.box3, &game.box4, &game.box5, &game.box6, &game.box7, &game.box8, &game.movehistory0, &game.movehistory1, &started, &modified)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("Game not found")
@@ -143,7 +144,7 @@ func GetGame(id uint) (*Game, error) {
 }
 
 func MakeGame(player0, player1 uint) (*Game, error) {
-	err := db.Ping()
+	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +164,7 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 		return nil, err
 	}
 
-	g.dbgame().upload()
+	_, err = g.dbgame().upload()
 
 	if err != nil {
 		return nil, err
@@ -174,14 +175,14 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 }
 
 func GetAllGames() ([]uint, error) {
-	err := db.Ping()
+	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
 	} //TODO: handle NULLS
 
 	var ids []uint
 
-	rows, err := db.Query("SELECT gameid FROM games")
+	rows, err := db.Db.Query("SELECT gameid FROM games")
 	defer rows.Close()
 	for rows.Next() {
 		var id uint

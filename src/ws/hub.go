@@ -5,7 +5,7 @@
 package ws
 
 import (
-// "log"
+	"log"
 )
 
 // hub maintains the set of active connections and broadcasts messages to the
@@ -72,7 +72,7 @@ func (h *hub) run() {
 				case c.send <- m:
 					//log.Println("sending")
 				default:
-					//log.Println("closing")
+					log.Println("closing")
 					close(c.send)
 					delete(h.connections, c)
 				}

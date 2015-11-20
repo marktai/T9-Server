@@ -1,12 +1,69 @@
 package main
 
 import (
+	"auth"
+	"crypto/hmac"
+	"crypto/sha256"
+	"db"
+	"encoding/base64"
 	"flag"
-	"game"
+	"fmt"
+	"log"
+	"net/http"
 	"server"
 )
 
 func main() {
+	db.Open()
+	defer db.Db.Close()
+	// makeUser()
+	testHMAC()
+}
+
+func makeUser() {
+	_, err := auth.MakeUser("me", "password")
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func testHMAC() {
+	id, secret, err := auth.Login("me", "password")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	r, err := http.NewRequest("GET", fmt.Sprintf("localhost/here?ID=%d", id), nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	time := "Naow1"
+
+	r.Header.Add("Time-Sent", time)
+
+	message := append([]byte(time), []byte("localhost/here")...)
+
+	mac := hmac.New(sha256.New, secret.Bytes())
+	mac.Write(message)
+	hmacBytes := mac.Sum(nil)
+
+	hmacString := base64.StdEncoding.EncodeToString(hmacBytes)
+	r.Header.Add("HMAC", hmacString)
+
+	// log.Println(r)
+
+	authed, err := auth.AuthRequest(r)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(authed)
+
+}
+
+func runServer() {
 
 	var port int
 
@@ -14,8 +71,7 @@ func main() {
 
 	flag.Parse()
 
-	game.Open()
-	defer game.Close()
+	db.Open()
+	defer db.Db.Close()
 	server.Run(port)
-
 }
