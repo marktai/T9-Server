@@ -1,8 +1,12 @@
 package server
 
 import (
+	"auth"
+	"encoding/json"
+	"fmt"
 	"game"
 	"github.com/gorilla/mux"
+	// "io/ioutil"
 	"log"
 	"net/http"
 	"ws"
@@ -82,7 +86,6 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := stringtoUint(vars["ID"])
 	if err != nil {
-		log.Println(id)
 		WriteError(w, err, 400)
 		return
 	}
@@ -105,6 +108,16 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authed, err := auth.AuthRequest(r)
+	if err != nil || !authed {
+
+		if err != nil {
+			log.Println(err)
+		}
+		WriteErrorString(w, "Not Authorized Request", 400)
+		return
+	}
+
 	game, err := game.GetGame(id)
 
 	if err != nil {
@@ -124,4 +137,74 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		ws.Broadcast(id, []byte("Changed"))
 	}
+}
+
+func makeUser(w http.ResponseWriter, r *http.Request) {
+
+	secret := r.FormValue("Secret")
+	if secret != "thisisatotallysecuresecret" {
+		WriteErrorString(w, "Sorry, you can't make a user now", 500)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var parsedJson map[string]string
+	err := decoder.Decode(&parsedJson)
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	user, ok := parsedJson["User"]
+	if !ok {
+		WriteErrorString(w, "No 'User' set in POST body", 400)
+		return
+	}
+	pass, ok := parsedJson["Password"]
+	if !ok {
+		WriteErrorString(w, "No 'Password' set in POST body", 400)
+		return
+	}
+
+	userID, err := auth.MakeUser(user, pass)
+	if err != nil {
+		WriteError(w, err, 500)
+		return
+	}
+
+	WriteJson(w, genMap("UserID", userID))
+
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+
+	decoder := json.NewDecoder(r.Body)
+	var parsedJson map[string]string
+	err := decoder.Decode(&parsedJson)
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	user, ok := parsedJson["User"]
+	if !ok {
+		WriteErrorString(w, "No 'User' set in POST body", 400)
+		return
+	}
+	pass, ok := parsedJson["Password"]
+	if !ok {
+		WriteErrorString(w, "No 'Password' set in POST body", 400)
+		return
+	}
+
+	userID, secret, err := auth.Login(user, pass)
+	if err != nil {
+		// hides details about server from login attempts"
+		log.Println(err)
+		WriteErrorString(w, "Username and password combination incorrect", 500)
+		return
+	}
+
+	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64()}
+	WriteJson(w, retMap)
 }

@@ -6,14 +6,15 @@ import (
 	"crypto/sha256"
 	"db"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"math/big"
 	mrand "math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,15 +25,27 @@ type Secret struct {
 	expiration time.Time
 }
 
+// secrets are an arbitrary big int number from 0 to 2^512
+// to actually use their value, they are converted into base64
+// then the base64 string chararcters are used as bytes
+// this is to get random bytes and still be able to nicely store them in strings
 func (s *Secret) Bytes() []byte {
 	return s.value.Bytes()
+}
+
+func (s *Secret) Base64() string {
+	return base64.StdEncoding.EncodeToString(s.Bytes())
+}
+
+func (s *Secret) String() string {
+	return s.Base64()
 }
 
 var bitSize int64 = 512
 
 var limit *big.Int
 
-func newSecret() *Secret {
+func newSecret() (*Secret, error) {
 	if limit == nil {
 		limit = big.NewInt(2)
 		limit.Exp(big.NewInt(2), big.NewInt(bitSize), nil)
@@ -40,10 +53,10 @@ func newSecret() *Secret {
 
 	value, err := rand.Int(rand.Reader, limit)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 	retSecret := &Secret{value, time.Now()}
-	return retSecret
+	return retSecret, nil
 }
 
 func stringtoUint(s string) (uint, error) {
@@ -143,65 +156,123 @@ func Login(user, pass string) (uint, *Secret, error) {
 	}
 
 	if _, ok := secretMap[userID]; !ok {
-		secret := newSecret()
+		secret, err := newSecret()
+		if err != nil {
+			return 0, nil, err
+		}
 		secretMap[userID] = secret
 	}
 
 	return userID, secretMap[userID], nil
 }
 
-// CheckMAC reports whether messageHMAC is a valid HMAC tag for message.
-func checkMAC(message, messageHMAC, key []byte) bool {
-	mac := hmac.New(sha256.New, key)
-	mac.Write(message)
+func ComputeHmac256(message, key string) []byte {
+	mac := hmac.New(sha256.New, []byte(key))
+	mac.Write([]byte(message))
 	expectedMAC := mac.Sum(nil)
+
+	return expectedMAC
+}
+
+// CheckMAC reports whether messageHMAC is a valid HMAC tag for message.
+func checkMAC(message, key string, messageHMAC []byte) bool {
+	expectedMAC := ComputeHmac256(message, key)
 	return hmac.Equal(messageHMAC, expectedMAC)
 }
 
 // returns userID, message used to generate HMAC, and HMAC from request
-func parseRequest(r *http.Request) (uint, []byte, []byte, error) {
-	userID, err := stringtoUint(r.FormValue("ID"))
+func parseRequest(r *http.Request) (uint, string, string, []byte, error) {
+
+	playerString := r.FormValue("Player")
+
+	if playerString == "" {
+		return 0, "", "", nil, errors.New("Player Query Value not set")
+	}
+
+	userID, err := stringtoUint(playerString)
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, "", "", nil, err
 	}
 
 	timeSlice, ok := r.Header["Time-Sent"]
+	if !ok || timeSlice == nil {
+		return 0, "", "", nil, errors.New("No Time-Sent header provided")
+	}
 
 	time := timeSlice[0]
 
-	if err != nil {
-		return 0, nil, nil, err
-	}
-
-	path := r.URL.Path
-
-	message := append([]byte(time), []byte(path)...)
+	message := time + ":" + r.URL.String()
 
 	messageHMACSlice, ok := r.Header["Hmac"]
-	if !ok {
-		return 0, nil, nil, errors.New("No HMAC header provided")
+	if !ok || timeSlice == nil {
+		return 0, "", "", nil, errors.New("No HMAC header provided")
 	}
 
 	messageHMACString := messageHMACSlice[0]
-	messageHMAC, err := base64.StdEncoding.DecodeString(messageHMACString)
-	if err != nil {
-		return 0, nil, nil, err
+	HMACFormat := ""
+
+	formatSlice, ok := r.Header["Format"]
+	if ok && formatSlice != nil {
+		format := formatSlice[0]
+		if ok {
+			switch strings.ToLower(format) {
+			case "base64", "64":
+				HMACFormat = "base64"
+			case "hex", "hexadecimal":
+				HMACFormat = "hex"
+			case "binary", "bits":
+				HMACFormat = "binary"
+			case "decimal":
+				HMACFormat = "decimal"
+			default:
+				HMACFormat = format
+			}
+		}
+	} else {
+		HMACFormat = "base64"
 	}
 
-	return userID, message, messageHMAC, nil
+	var messageHMAC []byte
+	switch HMACFormat {
+	case "base64":
+		messageHMAC, err = base64.StdEncoding.DecodeString(messageHMACString)
+	case "hex":
+		messageHMAC, err = hex.DecodeString(messageHMACString)
+	default:
+		return 0, "", "", nil, errors.New("'" + HMACFormat + "' not a supported format")
+	}
+
+	if err != nil {
+		return 0, "", "", nil, err
+	}
+
+	return userID, message, time, messageHMAC, nil
 }
 
 func AuthRequest(r *http.Request) (bool, error) {
-	userID, message, messageHMAC, err := parseRequest(r)
+	userID, message, timeString, messageHMAC, err := parseRequest(r)
 	if err != nil {
 		return false, err
 	}
+
+	timeInt, err := strconv.Atoi(timeString)
+	if err != nil {
+		return false, errors.New("Error parsing time (seconds since epoch)")
+	}
+
+	nowMillis := time.Now().Unix()
+	delay := int64(timeInt) - nowMillis
+
+	// rejects if times are more than 10 seconds apart
+	if delay < -10 || delay > 10 {
+		return false, errors.New("Time difference too large")
+	}
+
 	secret, ok := secretMap[userID]
 	if !ok {
 		return false, errors.New("No secret for that user")
 	}
 
-	secretBytes := secret.Bytes()
-	log.Println(secretBytes)
-	return checkMAC(message, messageHMAC, secretBytes), nil
+	secretString := secret.String()
+	return checkMAC(message, secretString, messageHMAC), nil
 }

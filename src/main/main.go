@@ -16,8 +16,16 @@ import (
 func main() {
 	db.Open()
 	defer db.Db.Close()
-	// makeUser()
-	testHMAC()
+	// // makeUser()
+	// testHMAC()
+
+	_, secret, err := auth.Login("me", "password")
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Printf("%s", secret.String())
+
+	runServer()
 }
 
 func makeUser() {
@@ -43,7 +51,7 @@ func testHMAC() {
 
 	r.Header.Add("Time-Sent", time)
 
-	message := append([]byte(time), []byte("localhost/here")...)
+	message := append([]byte(time), []byte(fmt.Sprintf("localhost/here?ID=%d", id))...)
 
 	mac := hmac.New(sha256.New, secret.Bytes())
 	mac.Write(message)

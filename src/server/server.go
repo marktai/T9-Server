@@ -13,6 +13,8 @@ import (
 func Run(port int) {
 	//start := time.Now()
 	r := mux.NewRouter()
+	r.HandleFunc("/login", login).Methods("POST")
+	r.HandleFunc("/users", makeUser).Methods("POST")
 	r.HandleFunc("/games", getAllGames).Methods("GET")
 	r.HandleFunc("/games", makeGame).Methods("POST")
 	r.HandleFunc("/games/{ID}", getGame).Methods("GET")
