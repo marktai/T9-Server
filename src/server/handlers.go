@@ -1,9 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"game"
 	"github.com/gorilla/mux"
 	"log"
+	"math/rand"
 	"net/http"
 	"ws"
 )
@@ -140,6 +142,10 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	WriteOutputError(w, genMap("Output", "Successful"), err)
 
 	if err == nil {
-		ws.Broadcast(id, []byte("Changed"))
+		err = ws.Broadcast(id, []byte(fmt.Sprintf("Changed %d", rand.Intn(256))))
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 }
