@@ -18,8 +18,8 @@ This is written in Go
     GET /games/{ID}/board | gives board in JSON
     GET /games/{ID}/string | gives board in string format (use monospaced font)
     GET /games/{ID}/ws | gives websocket that broadcasts when a game changes
-    POST /games?Player1={ID1}&Player2={ID2} | makes a new game with specified ID's and returns the ID of the game created
-    POST /games/{ID}?Player={PlayerID}&Box={BoxID}&Square={SquareID} | makes a move and responds with an error if unsucessful; broadcasts on ws if succesful 
+    POST /games?Player1={PID1}&Player2={PID2} | makes a new game with specified ID's and returns the ID of the game created
+    POST /games/{ID}/move?Player={PID}&Box={BID}&Square={SID} | makes a move and responds with an error if unsucessful; broadcasts on ws if succesful 
 
 ## Class Organization
  Image will be created later

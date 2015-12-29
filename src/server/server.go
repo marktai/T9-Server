@@ -21,6 +21,7 @@ func Run(port int) {
 	r.HandleFunc("/games/{ID}/string", getGameString).Methods("GET")
 	r.HandleFunc("/games/{ID}/ws", ws.ServeWs).Methods("GET")
 	r.HandleFunc("/games/{ID}", makeGameMove).Methods("POST")
+	r.HandleFunc("/games/{ID}/move", makeGameMove).Methods("POST")
 
 	for {
 		log.Printf("Running at 0.0.0.0:%d\n", port)
