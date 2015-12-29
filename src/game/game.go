@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 )
 
@@ -177,26 +178,55 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 
 }
 
+type idModified struct {
+	id       uint
+	modified time.Time
+}
+
+type idModifiedSlice []*idModified
+
+//sorts by most recent first
+func (a idModifiedSlice) Len() int           { return len(a) }
+func (a idModifiedSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a idModifiedSlice) Less(i, j int) bool { return a[i].modified.After(a[j].modified) }
+
 func GetAllGames() ([]uint, error) {
 	err := db.Ping()
 	if err != nil {
 		return nil, err
 	} //TODO: handle NULLS
 
-	var ids []uint
+	var games idModifiedSlice
 
-	rows, err := db.Query("SELECT gameid FROM games")
+	rows, err := db.Query("SELECT gameid, modified FROM games")
 	defer rows.Close()
 	for rows.Next() {
-		var id uint
-		if err := rows.Scan(&id); err != nil {
-			return ids, err
+		var tempgameactual idModified
+		tempgame := &tempgameactual
+		var modified string
+		if err := rows.Scan(&(tempgame.id), &modified); err != nil {
+			return nil, err
 		}
-		ids = append(ids, id)
+		//golang constant thingy
+		//reference time is "Mon Jan 2 15:04:05 -0700 MST 2006"
+		const sqlForm = "2006-01-02 15:04:05"
+
+		tempgame.modified, err = time.Parse(sqlForm, modified)
+		if err != nil {
+			return nil, err
+		}
+		games = append(games, tempgame)
 	}
 
 	if err := rows.Err(); err != nil {
-		return ids, err
+		return nil, err
+	}
+	sort.Sort(games)
+
+	var ids []uint
+
+	for _, tempgame := range games {
+		ids = append(ids, tempgame.id)
 	}
 
 	return ids, nil
