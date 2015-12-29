@@ -92,13 +92,13 @@ func tripEqualityAndNot0(a, b, c uint) bool {
 	return a != 0 && a == b && a == c
 }
 
-func (b *Box) CheckOwned() {
+func (b *Box) CheckOwned() uint {
 
 	//horizontal
 	for i := 0; i < 3; i++ {
 		if tripEqualityAndNot0(b.Squares[3*i], b.Squares[3*i+1], b.Squares[3*i+2]) {
 			b.Owned = b.Squares[3*i]
-			return
+			return b.Owned
 		}
 	}
 
@@ -106,17 +106,19 @@ func (b *Box) CheckOwned() {
 	for i := 0; i < 3; i++ {
 		if tripEqualityAndNot0(b.Squares[i], b.Squares[i+3], b.Squares[i+6]) {
 			b.Owned = b.Squares[i]
-			return
+			return b.Owned
 		}
 	}
 
 	if tripEqualityAndNot0(b.Squares[0], b.Squares[4], b.Squares[8]) {
 		b.Owned = b.Squares[0]
-		return
+		return b.Owned
 	}
 
 	if tripEqualityAndNot0(b.Squares[2], b.Squares[4], b.Squares[6]) {
 		b.Owned = b.Squares[2]
-		return
+		return b.Owned
 	}
+
+	return b.Owned
 }

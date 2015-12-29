@@ -52,6 +52,10 @@ func (g *Game) Update() (sql.Result, error) {
 }
 
 func (g *Game) MakeMove(player, box, square uint) error {
+	if g.Board.Box().CheckOwned() != 0 {
+		return errors.New("Game already finished")
+	}
+
 	playerTurn := g.Turn / 10 % 2
 	if player != g.Players[playerTurn] {
 		return errors.New("Not player's turn")
