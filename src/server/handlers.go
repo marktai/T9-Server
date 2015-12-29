@@ -5,7 +5,6 @@ import (
 	"game"
 	"github.com/gorilla/mux"
 	"log"
-	"math/rand"
 	"net/http"
 	"ws"
 )
@@ -142,7 +141,7 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	WriteOutputError(w, genMap("Output", "Successful"), err)
 
 	if err == nil {
-		err = ws.Broadcast(id, []byte(fmt.Sprintf("Changed %d", rand.Intn(256))))
+		err = ws.Broadcast(id, []byte(fmt.Sprintf("Changed %d, %d", box, square)))
 		if err != nil {
 			log.Println(err)
 		}
