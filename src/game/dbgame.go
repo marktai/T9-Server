@@ -16,6 +16,9 @@ var (
 	closeChan chan bool
 )
 
+// This is the ugly class that is used to interface with the database serialization of games
+// It converts to Game very easily
+
 type dbgame struct {
 	gameid       uint
 	player0      uint
@@ -36,8 +39,10 @@ type dbgame struct {
 	modified     time.Time
 }
 
+// Gets a unique game ID
+// Probably should change it if this is to scale
+// Fails if over 20 attempts
 func getUniqueID() (uint, error) {
-
 	rand.Seed(time.Now().Unix())
 
 	collision := 1
@@ -59,8 +64,8 @@ func getUniqueID() (uint, error) {
 	return id, nil
 }
 
+// Returns the Game represented by the dbgame
 func (g *dbgame) game() *Game {
-
 	var newGame Game
 
 	newGame.GameID = g.gameid
@@ -77,6 +82,7 @@ func (g *dbgame) game() *Game {
 	return &newGame
 }
 
+// Updates the database serialization to be equal to the dbgame
 func (g *dbgame) update() (sql.Result, error) {
 	err := db.Ping()
 	if err != nil {
@@ -92,6 +98,7 @@ func (g *dbgame) update() (sql.Result, error) {
 	return updateGame.Exec(g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.modified, g.gameid)
 }
 
+// Uploads a new game into the database
 func (g *dbgame) upload() (sql.Result, error) {
 	err := db.Ping()
 	if err != nil {
@@ -102,6 +109,7 @@ func (g *dbgame) upload() (sql.Result, error) {
 	return addGame.Exec(g.gameid, g.player0, g.player1, g.turn, g.box0, g.box1, g.box2, g.box3, g.box4, g.box5, g.box6, g.box7, g.box8, g.movehistory0, g.movehistory1, g.started, g.modified)
 }
 
+// Opens a connection to the database
 func Open() {
 	closeChan = make(chan bool)
 	var err error
@@ -117,6 +125,7 @@ func Open() {
 	}()
 }
 
+// Closes the connection to the database
 func Close() {
 	closeChan <- true
 }

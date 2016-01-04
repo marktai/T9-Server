@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-
 	var port int
 
 	flag.IntVar(&port, "Port", 8081, "Port the server listens to")
@@ -17,5 +16,4 @@ func main() {
 	game.Open()
 	defer game.Close()
 	server.Run(port)
-
 }

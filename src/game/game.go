@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+// Game is the class that represents all of a T9 game data
+
+// Metadata about the game
+// Pretty much everything besides the Board
 type GameInfo struct {
 	GameID      uint
 	Players     [2]uint
@@ -18,11 +22,13 @@ type GameInfo struct {
 	Modified    time.Time
 }
 
+// GameInfo and a Board
 type Game struct {
 	GameInfo
 	Board Board //0 - 4^10-1
 }
 
+// Returns a symbol based on the uint representation
 func symbol(input uint, translate bool) string {
 	if !translate {
 		return fmt.Sprintf("%d", input)
@@ -41,17 +47,20 @@ func symbol(input uint, translate bool) string {
 	}
 }
 
+// Returns a dbgame representation of the Game
 func (g *Game) dbgame() *dbgame {
 	comprBoard := g.Board.Compress()
 	m1, m2 := g.MoveHistory.Compress()
 	return &dbgame{g.GameID, g.Players[0], g.Players[1], g.Turn, comprBoard[0], comprBoard[1], comprBoard[2], comprBoard[3], comprBoard[4], comprBoard[5], comprBoard[6], comprBoard[7], comprBoard[8], m1, m2, g.Started, g.Modified}
 }
 
+// Updates the database version to equal the current Game
 func (g *Game) Update() (sql.Result, error) {
 	dg := g.dbgame()
 	return dg.update()
 }
 
+// Validates and then makes a move
 func (g *Game) MakeMove(player, box, square uint) error {
 	if g.Board.Box().CheckOwned() != 0 {
 		return errors.New("Game already finished")
@@ -99,10 +108,12 @@ func (g *Game) MakeMove(player, box, square uint) error {
 
 }
 
+// Returns the info of the game
 func (g *Game) Info() GameInfo {
 	return g.GameInfo
 }
 
+// Prints info about the game and the board
 func (g *Game) Print() {
 	log.Println("GameID:", g.GameID)
 	log.Println("Players:", g.Players)
@@ -113,6 +124,7 @@ func (g *Game) Print() {
 	log.Println(g.MoveHistory)
 }
 
+// Gets a Game frome the database
 func GetGame(id uint) (*Game, error) {
 	err := db.Ping()
 	if err != nil {
@@ -147,6 +159,7 @@ func GetGame(id uint) (*Game, error) {
 	return game.game(), nil
 }
 
+// Creates a new game and uploads it to the database
 func MakeGame(player0, player1 uint) (*Game, error) {
 	err := db.Ping()
 	if err != nil {
@@ -178,6 +191,7 @@ func MakeGame(player0, player1 uint) (*Game, error) {
 
 }
 
+// Used for sorting game id's by time modified
 type idModified struct {
 	id       uint
 	modified time.Time
@@ -190,6 +204,7 @@ func (a idModifiedSlice) Len() int           { return len(a) }
 func (a idModifiedSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a idModifiedSlice) Less(i, j int) bool { return a[i].modified.After(a[j].modified) }
 
+// Returns all games in the database sorted by most recently modified
 func GetAllGames() ([]uint, error) {
 	err := db.Ping()
 	if err != nil {

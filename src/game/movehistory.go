@@ -3,8 +3,11 @@ package game
 import ()
 
 // TODO: move to queue
+
+// Class to hold the last 18 moves
 type MoveHistory [18]uint
 
+// Decompresses from two uint to MoveHistory
 func (m *MoveHistory) Decompress(a, b uint64) {
 	compressed := [2]uint64{a, b}
 
@@ -17,6 +20,7 @@ func (m *MoveHistory) Decompress(a, b uint64) {
 	}
 }
 
+// Returns two uint that represent the MoveHistory
 func (m *MoveHistory) Compress() (uint64, uint64) {
 	var compressed [2]uint64
 	j := 1
@@ -30,6 +34,7 @@ func (m *MoveHistory) Compress() (uint64, uint64) {
 	return compressed[0], compressed[1]
 }
 
+// Adds a move to the MoveHistory queue
 func (m *MoveHistory) AddMove(move uint) {
 	for i := 17; i >= 1; i-- {
 		m[i] = m[i-1]
