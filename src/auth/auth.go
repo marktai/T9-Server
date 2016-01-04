@@ -183,7 +183,7 @@ func checkMAC(message, key string, messageHMAC []byte) bool {
 // returns userID, message used to generate HMAC, and HMAC from request
 func parseRequest(r *http.Request) (string, string, []byte, error) {
 	timeSlice, ok := r.Header["Time-Sent"]
-	if !ok || timeSlice == nil {
+	if !ok || timeSlice == nil || len(timeSlice) == 0 {
 		return "", "", nil, errors.New("No Time-Sent header provided")
 	}
 
@@ -192,7 +192,7 @@ func parseRequest(r *http.Request) (string, string, []byte, error) {
 	message := time + ":" + r.URL.String()
 
 	messageHMACSlice, ok := r.Header["Hmac"]
-	if !ok || timeSlice == nil {
+	if !ok || messageHMACSlice == nil || len(messageHMACSlice) == 0 {
 		return "", "", nil, errors.New("No HMAC header provided")
 	}
 
