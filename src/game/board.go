@@ -5,8 +5,11 @@ import (
 	"strings"
 )
 
+// This is the class that represents the all the squares and who owns them
+// It is used in Game
 type Board [9]Box
 
+// Converts from board object to an array of ints
 func (b *Board) Compress() [9]uint {
 	var comprBoard [9]uint
 	for i, _ := range b {
@@ -15,16 +18,19 @@ func (b *Board) Compress() [9]uint {
 	return comprBoard
 }
 
+// Converts from an array of ints to a board object
 func (b *Board) Decompress(compressed [9]uint) {
 	for i, _ := range compressed {
 		b[i].Decompress(compressed[i])
 	}
 }
 
+// Prints the board with representation
 func (b *Board) Print() {
 	log.Print("Board: \n" + b.String(true))
 }
 
+// Returns a string representation of the board
 func (b *Board) String(translate bool) string {
 	out := ""
 	for _, row := range b.StringArray(translate) {
@@ -33,6 +39,7 @@ func (b *Board) String(translate bool) string {
 	return out
 }
 
+// Returns a string array representation with every line a new entry
 func (b *Board) StringArray(translate bool) []string {
 	outArray := make([]string, 0)
 	var retArrays [3][5]string
@@ -64,6 +71,8 @@ func (b *Board) StringArray(translate bool) []string {
 	return outArray
 }
 
+// Returns a box object that represents the board with every square representing one of the boxes
+// Basically reduces the whole board to one box
 func (b *Board) Box() *Box {
 	var retBox Box
 	for i := 0; i < 9; i++ {

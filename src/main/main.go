@@ -19,11 +19,11 @@ func main() {
 	// // makeUser()
 	// testHMAC()
 
-	_, secret, err := auth.Login("me", "password")
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Printf("%s", secret.String())
+	// _, secret, err := auth.Login("me", "password")
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	// log.Printf("%s", secret.String())
 
 	runServer()
 }
@@ -72,7 +72,6 @@ func testHMAC() {
 }
 
 func runServer() {
-
 	var port int
 
 	flag.IntVar(&port, "Port", 8081, "Port the server listens to")

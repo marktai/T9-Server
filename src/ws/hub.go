@@ -5,6 +5,7 @@
 package ws
 
 import (
+	"errors"
 	"log"
 )
 
@@ -45,14 +46,12 @@ func makeHub(i uint) *hub {
 	return &h
 }
 
-func Broadcast(id uint, b []byte) {
+func Broadcast(id uint, b []byte) error {
 	if _, ok := hubMap[id]; ok {
 		hubMap[id].broadcast <- b
-		//log.Println("tried to broadcast")
+		return nil
 	} else {
-		//log.Println("im here?")
-		//log.Println(id)
-		//log.Println(hubMap)
+		return errors.New("No hub found with that ID")
 	}
 }
 

@@ -64,6 +64,24 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, genMap("Game", game.GameInfo))
 }
 
+func getBoard(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := stringtoUint(vars["ID"])
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	game, err := game.GetGame(id)
+
+	if err != nil {
+		WriteError(w, err, 400)
+		return
+	}
+
+	WriteJson(w, genMap("Board", game.Board))
+}
+
 func getGameString(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := stringtoUint(vars["ID"])
@@ -135,7 +153,11 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	WriteOutputError(w, genMap("Output", "Successful"), err)
 
 	if err == nil {
-		ws.Broadcast(id, []byte("Changed"))
+		err = ws.Broadcast(id, []byte(fmt.Sprintf("Changed %d, %d", box, square)))
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 }
 

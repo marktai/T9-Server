@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// This is the class that is used to represent 9 squares
+// It is used in the Board class
+
 // Turn
 // 0_ -> player 1 turn
 // _0-8 -> box 0-8, 9 -> anywhere
@@ -16,8 +19,8 @@ type Box struct {
 	Squares [9]uint
 }
 
+// Sets the current Box to be equal to the decompressed value of input
 func (b *Box) Decompress(compressed uint) error {
-
 	for i := 0; i <= 9; i++ {
 		num := compressed & 0x03
 		if i == 9 {
@@ -30,8 +33,8 @@ func (b *Box) Decompress(compressed uint) error {
 	return nil
 }
 
+// Returns an int that represents the Box
 func (b *Box) Compress() uint {
-
 	var total uint
 
 	total += b.Owned
@@ -43,13 +46,14 @@ func (b *Box) Compress() uint {
 	return total
 }
 
+// Prints out a spring representation of the Box
 func (b *Box) Print() {
-
 	out := fmt.Sprintln("Box:")
 	out += b.String(true)
 	log.Println(out)
 }
 
+// Returns a string representation of the Box
 func (b *Box) String(translate bool) string {
 	out := ""
 	retArray := b.StringArray(translate)
@@ -60,6 +64,7 @@ func (b *Box) String(translate bool) string {
 	return out
 }
 
+// Returns a string representation with every line a new entry
 func (b *Box) StringArray(translate bool) [5]string {
 	var retArray [5]string
 
@@ -76,6 +81,7 @@ func (b *Box) StringArray(translate bool) [5]string {
 	return retArray
 }
 
+// Makes a move by player at square
 func (b *Box) MakeMove(player, square uint) error {
 	if player != 1 && player != 2 {
 		return errors.New(fmt.Sprintf("%d is an invalid player", player))
@@ -88,17 +94,20 @@ func (b *Box) MakeMove(player, square uint) error {
 	return nil
 }
 
+// Check whether all 3 arguments are equal and not 0
+// Used to solve whether a Box is owned
 func tripEqualityAndNot0(a, b, c uint) bool {
 	return a != 0 && a == b && a == c
 }
 
-func (b *Box) CheckOwned() {
-
+// Checks whether this Box is owned
+// Inherently prefers some configurations over others if there are two winners
+func (b *Box) CheckOwned() uint {
 	//horizontal
 	for i := 0; i < 3; i++ {
 		if tripEqualityAndNot0(b.Squares[3*i], b.Squares[3*i+1], b.Squares[3*i+2]) {
 			b.Owned = b.Squares[3*i]
-			return
+			return b.Owned
 		}
 	}
 
@@ -106,17 +115,19 @@ func (b *Box) CheckOwned() {
 	for i := 0; i < 3; i++ {
 		if tripEqualityAndNot0(b.Squares[i], b.Squares[i+3], b.Squares[i+6]) {
 			b.Owned = b.Squares[i]
-			return
+			return b.Owned
 		}
 	}
 
 	if tripEqualityAndNot0(b.Squares[0], b.Squares[4], b.Squares[8]) {
 		b.Owned = b.Squares[0]
-		return
+		return b.Owned
 	}
 
 	if tripEqualityAndNot0(b.Squares[2], b.Squares[4], b.Squares[6]) {
 		b.Owned = b.Squares[2]
-		return
+		return b.Owned
 	}
+
+	return b.Owned
 }

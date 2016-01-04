@@ -20,19 +20,11 @@ func Run(port int) {
 	r.HandleFunc("/games", makeGame).Methods("POST")
 	r.HandleFunc("/games/{ID}", getGame).Methods("GET")
 	r.HandleFunc("/games/{ID}/info", getGame).Methods("GET")
-	r.HandleFunc("/games/{ID}", makeGameMove).Methods("POST")
+	r.HandleFunc("/games/{ID}/board", getBoard).Methods("GET")
 	r.HandleFunc("/games/{ID}/string", getGameString).Methods("GET")
 	r.HandleFunc("/games/{ID}/ws", ws.ServeWs).Methods("GET")
-	//log.Println("Took %s", time.Now().Sub(start))
-	//log.Println(post)
-
-	// r.HandleFunc("/posts", getPostList)
-	// r.HandleFunc("/posts/{Title}", getPost)
-	// r.HandleFunc("/posts/{Title}/paragraph/{id:[0-9]+}", getParagraph).Methods("GET")
-	// r.HandleFunc("/posts/{Title}/info", getInfo).Methods("GET")
-	// r.HandleFunc("/desktopIP", getIP).Methods("GET")
-	// r.HandleFunc("/desktopIP", setIP).Methods("POST")
-	// r.HandleFunc("/desktopIP", clearIP).Methods("DELETE")
+	r.HandleFunc("/games/{ID}", makeGameMove).Methods("POST")
+	r.HandleFunc("/games/{ID}/move", makeGameMove).Methods("POST")
 
 	for {
 		log.Printf("Running at 0.0.0.0:%d\n", port)

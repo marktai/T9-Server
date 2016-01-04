@@ -2,3 +2,5 @@ pkg
 github.com
 bin
 main
+log.txt
+*.swp
