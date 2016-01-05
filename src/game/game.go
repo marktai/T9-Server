@@ -162,6 +162,10 @@ func GetGame(id uint) (*Game, error) {
 
 // Creates a new game and uploads it to the database
 func MakeGame(player0, player1 uint) (*Game, error) {
+	if player0 == player1 {
+		return nil, errors.New("player1 cannot be the same as player2 in creating game")
+	}
+
 	err := db.Db.Ping()
 	if err != nil {
 		return nil, err

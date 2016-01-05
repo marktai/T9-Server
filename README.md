@@ -21,6 +21,14 @@ This is written in Go
     POST /games?Player1={PID1}&Player2={PID2} | makes a new game with specified ID's and returns the ID of the game created
     POST /games/{ID}/move?Player={PID}&Box={BID}&Square={SID} | makes a move and responds with an error if unsucessful; broadcasts on ws if succesful 
 
+### Request Authorization 
+    Header | Value
+    ------ | --------
+    HMAC | encoded HMAC with SHA 256
+    Encoding | encoding format for HMAC (if not provided, defaults to hex) 
+    Time-Sent | seconds since epoch (fails if more than 10 seconds away from time received)
+
+
 ## Class Organization
  Image will be created later
 

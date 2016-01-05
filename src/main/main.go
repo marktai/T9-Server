@@ -14,8 +14,6 @@ import (
 )
 
 func main() {
-	db.Open()
-	defer db.Db.Close()
 	// // makeUser()
 	// testHMAC()
 

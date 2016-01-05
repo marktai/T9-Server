@@ -7,6 +7,7 @@ import (
 	"game"
 	"github.com/gorilla/mux"
 	// "io/ioutil"
+	"errors"
 	"log"
 	"net/http"
 	"ws"
@@ -15,13 +16,13 @@ import (
 func makeGame(w http.ResponseWriter, r *http.Request) {
 	player1, err := stringtoUint(r.FormValue("Player1"))
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteError(w, errors.New("Error parsing Player1 form value"), 400)
 		return
 	}
 
 	player2, err := stringtoUint(r.FormValue("Player2"))
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteError(w, errors.New("Error parsing Player2 form value"), 400)
 		return
 	}
 
@@ -110,19 +111,19 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 
 	player, err := stringtoUint(r.FormValue("Player"))
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteError(w, errors.New("Error parsing Player form value"), 400)
 		return
 	}
 
 	box, err := stringtoUint(r.FormValue("Box"))
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteError(w, errors.New("Error parsing Box form value"), 400)
 		return
 	}
 
 	square, err := stringtoUint(r.FormValue("Square"))
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteError(w, errors.New("Error parsing Square form value"), 400)
 		return
 	}
 
@@ -204,7 +205,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	var parsedJson map[string]string
 	err := decoder.Decode(&parsedJson)
 	if err != nil {
-		WriteError(w, err, 400)
+		WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
 		return
 	}
 

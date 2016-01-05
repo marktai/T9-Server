@@ -41,6 +41,10 @@ func (s *Secret) String() string {
 	return s.Base64()
 }
 
+func (s *Secret) Expired() bool {
+	return time.Now().After(s.expiration)
+}
+
 var bitSize int64 = 512
 
 var limit *big.Int
@@ -55,7 +59,7 @@ func newSecret() (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	retSecret := &Secret{value, time.Now()}
+	retSecret := &Secret{value, time.Now().Add(30 * time.Minute)}
 	return retSecret, nil
 }
 
@@ -175,7 +179,7 @@ func ComputeHmac256(message, key string) []byte {
 }
 
 // CheckMAC reports whether messageHMAC is a valid HMAC tag for message.
-func checkMAC(message, key string, messageHMAC []byte) bool {
+func checkMAC(key, message string, messageHMAC []byte) bool {
 	expectedMAC := ComputeHmac256(message, key)
 	return hmac.Equal(messageHMAC, expectedMAC)
 }
@@ -197,38 +201,38 @@ func parseRequest(r *http.Request) (string, string, []byte, error) {
 	}
 
 	messageHMACString := messageHMACSlice[0]
-	HMACFormat := ""
+	HMACEncoding := ""
 
-	formatSlice, ok := r.Header["Format"]
-	if ok && formatSlice != nil {
-		format := formatSlice[0]
+	encodingSlice, ok := r.Header["Encoding"]
+	if ok && encodingSlice != nil {
+		encoding := encodingSlice[0]
 		if ok {
-			switch strings.ToLower(format) {
+			switch strings.ToLower(encoding) {
 			case "base64", "64":
-				HMACFormat = "base64"
+				HMACEncoding = "base64"
 			case "hex", "hexadecimal":
-				HMACFormat = "hex"
+				HMACEncoding = "hex"
 			case "binary", "bits":
-				HMACFormat = "binary"
+				HMACEncoding = "binary"
 			case "decimal":
-				HMACFormat = "decimal"
+				HMACEncoding = "decimal"
 			default:
-				HMACFormat = format
+				HMACEncoding = encoding
 			}
 		}
 	} else {
-		HMACFormat = "base64"
+		HMACEncoding = "hex"
 	}
 
 	var messageHMAC []byte
 	var err error
-	switch HMACFormat {
+	switch HMACEncoding {
 	case "base64":
 		messageHMAC, err = base64.StdEncoding.DecodeString(messageHMACString)
 	case "hex":
 		messageHMAC, err = hex.DecodeString(messageHMACString)
 	default:
-		return "", "", nil, errors.New("'" + HMACFormat + "' not a supported format")
+		return "", "", nil, errors.New("'" + HMACEncoding + "' not a supported encoding")
 	}
 
 	if err != nil {
@@ -238,6 +242,13 @@ func parseRequest(r *http.Request) (string, string, []byte, error) {
 	return message, time, messageHMAC, nil
 }
 
+// Check README.md for documentation
+// Request Headers
+// HMAC - encoded HMAC with SHA 256
+// Encoding - encoding format (default hex)
+// Time-Sent - seconds since epoch
+
+// Verifies whether a request is correctly authorized
 func AuthRequest(r *http.Request, userID uint) (bool, error) {
 	message, timeString, messageHMAC, err := parseRequest(r)
 	if err != nil {
@@ -249,11 +260,10 @@ func AuthRequest(r *http.Request, userID uint) (bool, error) {
 		return false, errors.New("Error parsing time (seconds since epoch)")
 	}
 
-	nowMillis := time.Now().Unix()
-	delay := int64(timeInt) - nowMillis
+	delay := int64(timeInt) - time.Now().Unix()
 
 	// rejects if times are more than 10 seconds apart
-	if delay < -60 || delay > 60 {
+	if delay < -10 || delay > 10 {
 		return false, errors.New("Time difference too large")
 	}
 
@@ -262,6 +272,10 @@ func AuthRequest(r *http.Request, userID uint) (bool, error) {
 		return false, errors.New("No secret for that user")
 	}
 
+	if secret.Expired() {
+		return false, errors.New("Secret expired")
+	}
+
 	secretString := secret.String()
-	return checkMAC(message, secretString, messageHMAC), nil
+	return checkMAC(secretString, message, messageHMAC), nil
 }
