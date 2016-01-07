@@ -224,7 +224,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// hides details about server from login attempts"
 		log.Println(err)
-		WriteErrorString(w, "Username and password combination incorrect", 500)
+		WriteErrorString(w, "User and password combination incorrect", 400)
 		return
 	}
 
