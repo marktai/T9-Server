@@ -45,6 +45,14 @@ func (s *Secret) Expired() bool {
 	return time.Now().After(s.expiration)
 }
 
+func (s *Secret) ExpirationUTC() string {
+	return s.expiration.UTC().Format(time.RFC3339)
+}
+
+func (s *Secret) resetExpiration() {
+	s.expiration = time.Now().Add(30 * time.Minute)
+}
+
 var bitSize int64 = 512
 
 var limit *big.Int
@@ -59,7 +67,9 @@ func newSecret() (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	retSecret := &Secret{value, time.Now().Add(30 * time.Minute)}
+	retSecret := &Secret{}
+	retSecret.value = value
+	retSecret.resetExpiration()
 	return retSecret, nil
 }
 
@@ -128,7 +138,6 @@ func MakeUser(user, pass string) (uint, error) {
 }
 
 func getUserID(user string) (uint, error) {
-
 	var userID uint
 	err := db.Db.QueryRow("SELECT id FROM users WHERE name=?", user).Scan(&userID)
 
@@ -148,6 +157,10 @@ func getSaltHash(userID uint) ([]byte, error) {
 func Login(user, pass string) (uint, *Secret, error) {
 
 	userID, err := getUserID(user)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	hash, err := getSaltHash(userID)
 	if err != nil {
 		return 0, nil, err
@@ -159,13 +172,35 @@ func Login(user, pass string) (uint, *Secret, error) {
 		return 0, nil, err
 	}
 
-	if _, ok := secretMap[userID]; !ok {
+	if _, ok := secretMap[userID]; !ok || secretMap[userID].Expired() {
 		secret, err := newSecret()
 		if err != nil {
 			return 0, nil, err
 		}
 		secretMap[userID] = secret
 	}
+
+	secretMap[userID].resetExpiration()
+
+	return userID, secretMap[userID], nil
+}
+
+func VerifySecret(user, inpSecret string) (uint, *Secret, error) {
+
+	userID, err := getUserID(user)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if _, ok := secretMap[userID]; !ok {
+		return 0, nil, errors.New("No secret found for user")
+	} else if secretMap[userID].Expired() {
+		return 0, nil, errors.New("Secret has expired")
+	} else if secretMap[userID].String() != inpSecret {
+		return 0, nil, errors.New("Secrets do not match")
+	}
+
+	secretMap[userID].resetExpiration()
 
 	return userID, secretMap[userID], nil
 }

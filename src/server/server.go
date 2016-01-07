@@ -14,7 +14,9 @@ func Run(port int) {
 	//start := time.Now()
 	r := mux.NewRouter()
 
+	// user requests
 	r.HandleFunc("/login", login).Methods("POST")
+	r.HandleFunc("/verifySecret", verifySecret).Methods("POST")
 	r.HandleFunc("/users", makeUser).Methods("POST")
 
 	// unauthorized requests
