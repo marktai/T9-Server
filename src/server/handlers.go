@@ -129,16 +129,14 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 
 	authed, err := auth.AuthRequest(r, player)
 	if err != nil || !authed {
-
 		if err != nil {
 			log.Println(err)
 		}
-		WriteErrorString(w, "Not Authorized Request", 400)
+		WriteErrorString(w, "Not Authorized Request", 401)
 		return
 	}
 
 	game, err := game.GetGame(id)
-
 	if err != nil {
 		WriteError(w, err, 400)
 		return
@@ -224,7 +222,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// hides details about server from login attempts"
 		log.Println(err)
-		WriteErrorString(w, "User and password combination incorrect", 400)
+		WriteErrorString(w, "User and password combination incorrect", 401)
 		return
 	}
 
@@ -246,7 +244,7 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		WriteErrorString(w, "Not Authorized Request", 400)
+		WriteErrorString(w, "Not Authorized Request", 401)
 		return
 	}
 

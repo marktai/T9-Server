@@ -28,6 +28,8 @@ This is written in Go
     Encoding | encoding format for HMAC (if not provided, defaults to hex) 
     Time-Sent | seconds since epoch (fails if more than 10 seconds away from time received)
 
+    The HMAC uses (seconds in epoch):(path including initial / and without the T9) as the message and the login secret (in base 64 parsed as a string) as a secret.
+
 
 ## Class Organization
  Image will be created later
