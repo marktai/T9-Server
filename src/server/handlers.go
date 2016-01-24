@@ -7,9 +7,11 @@ import (
 	"game"
 	"github.com/gorilla/mux"
 	// "io/ioutil"
+	"encoding/base64"
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 	"ws"
 )
 
@@ -129,16 +131,14 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 
 	authed, err := auth.AuthRequest(r, player)
 	if err != nil || !authed {
-
 		if err != nil {
 			log.Println(err)
 		}
-		WriteErrorString(w, "Not Authorized Request", 400)
+		WriteErrorString(w, "Not Authorized Request", 401)
 		return
 	}
 
 	game, err := game.GetGame(id)
-
 	if err != nil {
 		WriteError(w, err, 400)
 		return
@@ -201,12 +201,30 @@ func makeUser(w http.ResponseWriter, r *http.Request) {
 
 func login(w http.ResponseWriter, r *http.Request) {
 
-	decoder := json.NewDecoder(r.Body)
 	var parsedJson map[string]string
-	err := decoder.Decode(&parsedJson)
-	if err != nil {
-		WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
-		return
+	if encodedAuth := r.Header.Get("Authorization"); encodedAuth != "" {
+		authBytes, err := base64.StdEncoding.DecodeString(encodedAuth)
+		if err != nil {
+			//ERROR
+		}
+		auth := string(authBytes[:])
+		if strings.Count(auth, ":") != 1 {
+			// ERROR
+		}
+		authSlice := strings.Split(auth, ":")
+
+		parsedJson = make(map[string]string)
+		parsedJson["User"] = authSlice[0]
+		parsedJson["Password"] = authSlice[1]
+	} else {
+
+		decoder := json.NewDecoder(r.Body)
+
+		err := decoder.Decode(&parsedJson)
+		if err != nil {
+			WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
+			return
+		}
 	}
 
 	user, ok := parsedJson["User"]
@@ -224,11 +242,44 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// hides details about server from login attempts"
 		log.Println(err)
-		WriteErrorString(w, "Username and password combination incorrect", 500)
+		WriteErrorString(w, "User and password combination incorrect", 401)
 		return
 	}
 
-	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64()}
+	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64(), "Expiration": secret.ExpirationUTC()}
+	WriteJson(w, retMap)
+}
+
+func verifySecret(w http.ResponseWriter, r *http.Request) {
+
+	decoder := json.NewDecoder(r.Body)
+	var parsedJson map[string]string
+	err := decoder.Decode(&parsedJson)
+	if err != nil {
+		WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
+		return
+	}
+
+	user, ok := parsedJson["User"]
+	if !ok {
+		WriteErrorString(w, "No 'User' set in POST body", 400)
+		return
+	}
+	inpSecret, ok := parsedJson["Secret"]
+	if !ok {
+		WriteErrorString(w, "No 'Secret' set in POST body", 400)
+		return
+	}
+
+	userID, secret, err := auth.VerifySecret(user, inpSecret)
+	if err != nil {
+		// hides details about server from login attempts"
+		log.Println(err)
+		WriteErrorString(w, "User and secret combination incorrect", 400)
+		return
+	}
+
+	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64(), "Expiration": secret.ExpirationUTC()}
 	WriteJson(w, retMap)
 }
 
@@ -246,7 +297,7 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		WriteErrorString(w, "Not Authorized Request", 400)
+		WriteErrorString(w, "Not Authorized Request", 401)
 		return
 	}
 
