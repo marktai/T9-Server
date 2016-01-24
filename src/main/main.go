@@ -22,8 +22,17 @@ func main() {
 	// 	log.Panic(err)
 	// }
 	// log.Printf("%s", secret.String())
+	var port int
+	var disableAuth bool
 
-	runServer()
+	flag.IntVar(&port, "Port", 8081, "Port the server listens to")
+	flag.BoolVar(&disableAuth, "Disable Auth", false, "Disables authentication requirements")
+
+	flag.Parse()
+
+	db.Open()
+	defer db.Db.Close()
+	server.Run(port, disableAuth)
 }
 
 func makeUser() {
@@ -67,16 +76,4 @@ func testHMAC() {
 	}
 	log.Println(authed)
 
-}
-
-func runServer() {
-	var port int
-
-	flag.IntVar(&port, "Port", 8081, "Port the server listens to")
-
-	flag.Parse()
-
-	db.Open()
-	defer db.Db.Close()
-	server.Run(port)
 }

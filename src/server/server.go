@@ -10,9 +10,12 @@ import (
 	"ws"
 )
 
-func Run(port int) {
+var requireAuth bool
+
+func Run(port int, disableAuth bool) {
 	//start := time.Now()
 	r := mux.NewRouter()
+	requireAuth = !disableAuth
 
 	// user requests
 	r.HandleFunc("/login", login).Methods("POST")

@@ -129,13 +129,15 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authed, err := auth.AuthRequest(r, player)
-	if err != nil || !authed {
-		if err != nil {
-			log.Println(err)
+	if requireAuth {
+		authed, err := auth.AuthRequest(r, player)
+		if err != nil || !authed {
+			if err != nil {
+				log.Println(err)
+			}
+			WriteErrorString(w, "Not Authorized Request", 401)
+			return
 		}
-		WriteErrorString(w, "Not Authorized Request", 401)
-		return
 	}
 
 	game, err := game.GetGame(id)
@@ -291,14 +293,17 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err, 400)
 	}
 
-	authed, err := auth.AuthRequest(r, userID)
-	if err != nil || !authed {
+	if requireAuth {
 
-		if err != nil {
-			log.Println(err)
+		authed, err := auth.AuthRequest(r, userID)
+		if err != nil || !authed {
+
+			if err != nil {
+				log.Println(err)
+			}
+			WriteErrorString(w, "Not Authorized Request", 401)
+			return
 		}
-		WriteErrorString(w, "Not Authorized Request", 401)
-		return
 	}
 
 	games, err := game.GetUserGames(userID)
