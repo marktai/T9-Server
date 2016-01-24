@@ -24,7 +24,6 @@ func Run(port int, disableAuth bool) {
 
 	// unauthorized requests
 	r.HandleFunc("/games", getAllGames).Methods("GET")
-	r.HandleFunc("/games", makeGame).Methods("POST")
 	r.HandleFunc("/games/{ID}", getGame).Methods("GET")
 	r.HandleFunc("/games/{ID}/info", getGame).Methods("GET")
 	r.HandleFunc("/games/{ID}/board", getBoard).Methods("GET")
@@ -32,6 +31,7 @@ func Run(port int, disableAuth bool) {
 	r.HandleFunc("/games/{ID}/ws", ws.ServeWs).Methods("GET")
 
 	// authorized requests
+	r.HandleFunc("/games", makeGame).Methods("POST")
 	r.HandleFunc("/games/{ID}", makeGameMove).Methods("POST")
 	r.HandleFunc("/games/{ID}/move", makeGameMove).Methods("POST")
 	r.HandleFunc("/users/{userID}/games", getUserGames).Methods("GET")

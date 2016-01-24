@@ -26,7 +26,7 @@ func main() {
 	var disableAuth bool
 
 	flag.IntVar(&port, "Port", 8081, "Port the server listens to")
-	flag.BoolVar(&disableAuth, "Disable Auth", false, "Disables authentication requirements")
+	flag.BoolVar(&disableAuth, "DisableAuth", false, "Disables authentication requirements")
 
 	flag.Parse()
 

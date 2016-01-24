@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"ws"
@@ -26,6 +27,40 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		WriteError(w, errors.New("Error parsing Player2 form value"), 400)
 		return
+	}
+
+	starter, err := stringtoUint(r.FormValue("Starter"))
+	// 0 means random
+	// 1 means player1 starts
+	// 2 means player2 starts
+	if err != nil {
+		starter = 0
+	}
+
+	if starter > 3 {
+		WriteError(w, errors.New("Starter must be 0-2"), 400)
+	}
+
+	if requireAuth {
+		authed, err := auth.AuthRequest(r, player1)
+		if err != nil || !authed {
+			if err != nil {
+				log.Println(err)
+			}
+			WriteErrorString(w, "Not Authorized Request", 401)
+			return
+		}
+	}
+
+	// 0 means that 50% chance of switching
+	switch starter {
+	case 0:
+		if rand.Intn(2) == 1 {
+			break
+		}
+		fallthrough
+	case 2:
+		player1, player2 = player2, player1
 	}
 
 	game, err := game.MakeGame(player1, player2)
