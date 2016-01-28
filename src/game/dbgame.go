@@ -6,8 +6,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	// "gopkg.in/mgo.v2"
 	// "gopkg.in/mgo.v2/bson"
-	"errors"
-	"math/rand"
+	//	"errors"
+	//	"math/rand"
 	"time"
 )
 
@@ -31,6 +31,55 @@ type dbgame struct {
 	modified     time.Time
 }
 
+func checkIDConflict(id uint) (bool, error) {
+	collision := 1
+	err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE gameid=?)", id).Scan(&collision)
+	return collision != 0, err
+}
+
+func getUniqueID() (uint, error) {
+
+	var count uint
+	var scale uint
+	var addConst uint
+
+	var newID uint
+
+	conflict := true
+
+	err := db.Db.QueryRow("SELECT count, scale, addConst FROM count WHERE type='games'").Scan(&count, &scale, &addConst)
+	if err != nil {
+		return 0, err
+	}
+
+	for conflict {
+
+		count += 1
+
+		newID = (count*scale + addConst) % 65536
+
+		conflict, err = checkIDConflict(newID)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	updateCount, err := db.Db.Prepare("UPDATE count SET count=? WHERE type='games'")
+
+	if err != nil {
+		return newID, err
+	}
+
+	_, err = updateCount.Exec(count)
+
+	if err != nil {
+		return newID, err
+	}
+
+	return newID, nil
+}
+
+/*
 func getUniqueID() (uint, error) {
 
 	rand.Seed(time.Now().Unix())
@@ -53,6 +102,8 @@ func getUniqueID() (uint, error) {
 	}
 	return id, nil
 }
+
+*/
 
 func (g *dbgame) game() *Game {
 
