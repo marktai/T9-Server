@@ -191,7 +191,7 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	WriteOutputError(w, genMap("Output", "Successful"), err)
 
 	if err == nil {
-		err = ws.Broadcast(id, []byte(fmt.Sprintf("Changed %d, %d", box, square)))
+		err = ws.BroadcastEvent(id, "Change", fmt.Sprintf("Changed %d, %d", box, square))
 		if err != nil {
 			log.Println(err)
 		}
