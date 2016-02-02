@@ -11,7 +11,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 	"math/big"
-	mrand "math/rand"
+	//	mrand "math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,6 +78,55 @@ func stringtoUint(s string) (uint, error) {
 	return uint(i), err
 }
 
+func checkIDConflict(id uint) (bool, error) {
+	collision := 1
+	err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE userid=?)", id).Scan(&collision)
+	return collision != 0, err
+}
+
+func getUniqueID() (uint, error) {
+
+	var count uint
+	var scale uint
+	var addConst uint
+
+	var newID uint
+
+	conflict := true
+
+	err := db.Db.QueryRow("SELECT count, scale, addConst FROM count WHERE type='users'").Scan(&count, &scale, &addConst)
+	if err != nil {
+		return 0, err
+	}
+
+	for conflict {
+
+		count += 1
+
+		newID = (count*scale + addConst) % 65536
+
+		conflict, err = checkIDConflict(newID)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	updateCount, err := db.Db.Prepare("UPDATE count SET count=? WHERE type='users'")
+
+	if err != nil {
+		return newID, err
+	}
+
+	_, err = updateCount.Exec(count)
+
+	if err != nil {
+		return newID, err
+	}
+
+	return newID, nil
+}
+
+/*
 func getUniqueID() (uint, error) {
 
 	mrand.Seed(time.Now().Unix())
@@ -99,6 +148,7 @@ func getUniqueID() (uint, error) {
 	}
 	return id, nil
 }
+*/
 
 func MakeUser(user, pass string) (uint, error) {
 	_, err := getUserID(user)
@@ -139,14 +189,14 @@ func MakeUser(user, pass string) (uint, error) {
 
 func getUserID(user string) (uint, error) {
 	var userID uint
-	err := db.Db.QueryRow("SELECT id FROM users WHERE name=?", user).Scan(&userID)
+	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
 
 	return userID, err
 }
 
 func getSaltHash(userID uint) ([]byte, error) {
 	saltHashString := ""
-	err := db.Db.QueryRow("SELECT salthash FROM users WHERE id=?", userID).Scan(&saltHashString)
+	err := db.Db.QueryRow("SELECT salthash FROM users WHERE userid=?", userID).Scan(&saltHashString)
 	if err != nil {
 		return nil, err
 	}

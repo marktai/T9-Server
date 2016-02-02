@@ -5,6 +5,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 )
@@ -44,6 +45,22 @@ func makeHub(i uint) *hub {
 	//log.Println(hubMap)
 
 	return &h
+}
+
+func BroadcastEvent(id uint, eventType string, data interface{}) error {
+	eventMap := make(map[string]interface{})
+	eventMap["event"] = eventType
+	eventMap["data"] = data
+	jsonOut, err := json.Marshal(eventMap)
+	if err != nil {
+		return err
+	}
+	if _, ok := hubMap[id]; ok {
+		hubMap[id].broadcast <- jsonOut
+		return nil
+	} else {
+		return errors.New("No hub found with that ID")
+	}
 }
 
 func Broadcast(id uint, b []byte) error {
