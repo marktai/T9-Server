@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"math/big"
 	//	mrand "math/rand"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,12 +79,14 @@ func stringtoUint(s string) (uint, error) {
 	return uint(i), err
 }
 
+// checks if user id conflict in database
 func checkIDConflict(id uint) (bool, error) {
 	collision := 1
 	err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE userid=?)", id).Scan(&collision)
 	return collision != 0, err
 }
 
+// returns a unique id for a user
 func getUniqueID() (uint, error) {
 
 	var count uint
@@ -92,17 +95,14 @@ func getUniqueID() (uint, error) {
 
 	var newID uint
 
-	conflict := true
-
 	err := db.Db.QueryRow("SELECT count, scale, addConst FROM count WHERE type='users'").Scan(&count, &scale, &addConst)
 	if err != nil {
 		return 0, err
 	}
 
+	conflict := true
 	for conflict {
-
 		count += 1
-
 		newID = (count*scale + addConst) % 65536
 
 		conflict, err = checkIDConflict(newID)
@@ -112,13 +112,11 @@ func getUniqueID() (uint, error) {
 	}
 
 	updateCount, err := db.Db.Prepare("UPDATE count SET count=? WHERE type='users'")
-
 	if err != nil {
 		return newID, err
 	}
 
 	_, err = updateCount.Exec(count)
-
 	if err != nil {
 		return newID, err
 	}
@@ -126,32 +124,9 @@ func getUniqueID() (uint, error) {
 	return newID, nil
 }
 
-/*
-func getUniqueID() (uint, error) {
-
-	mrand.Seed(time.Now().Unix())
-	collision := 1
-	times := 0
-	var id uint
-
-	for collision != 0 {
-
-		id = uint(mrand.Int31n(65536))
-		err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id=?)", id).Scan(&collision)
-		if err != nil {
-			return id, err
-		}
-		times++
-		if times > 20 {
-			return id, errors.New("Too many attempts to find a unique game ID")
-		}
-	}
-	return id, nil
-}
-*/
-
+// makes a new user and returns its id
 func MakeUser(user, pass string) (uint, error) {
-	_, err := getUserID(user)
+	_, err := GetUserID(user)
 	if err == nil {
 		return 0, errors.New("User already made")
 	}
@@ -187,13 +162,15 @@ func MakeUser(user, pass string) (uint, error) {
 
 }
 
-func getUserID(user string) (uint, error) {
+// returns the userid of a user
+func GetUserID(user string) (uint, error) {
 	var userID uint
 	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
 
 	return userID, err
 }
 
+// returns the salthash of a user
 func getSaltHash(userID uint) ([]byte, error) {
 	saltHashString := ""
 	err := db.Db.QueryRow("SELECT salthash FROM users WHERE userid=?", userID).Scan(&saltHashString)
@@ -204,9 +181,10 @@ func getSaltHash(userID uint) ([]byte, error) {
 	return saltHash, err
 }
 
+// if a successful login, generates a secret or refreshes the existing one
 func Login(user, pass string) (uint, *Secret, error) {
 
-	userID, err := getUserID(user)
+	userID, err := GetUserID(user)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -235,9 +213,9 @@ func Login(user, pass string) (uint, *Secret, error) {
 	return userID, secretMap[userID], nil
 }
 
+// if the user and secret are correct, refreshes the secret
 func VerifySecret(user, inpSecret string) (uint, *Secret, error) {
-
-	userID, err := getUserID(user)
+	userID, err := GetUserID(user)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -266,6 +244,7 @@ func ComputeHmac256(message, key string) []byte {
 // CheckMAC reports whether messageHMAC is a valid HMAC tag for message.
 func checkMAC(key, message string, messageHMAC []byte) bool {
 	expectedMAC := ComputeHmac256(message, key)
+	log.Println("key", key, "message", message, "expected", expectedMAC, "received", messageHMAC)
 	return hmac.Equal(messageHMAC, expectedMAC)
 }
 
