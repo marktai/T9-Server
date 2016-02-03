@@ -105,8 +105,20 @@ func (g *Game) MakeMove(player, box, square uint) error {
 		g.Turn += square
 	}
 
+	g.CheckVictor()
+
 	return nil
 
+}
+
+func (g *Game) CheckVictor() uint {
+
+	victor := g.Board.Box().CheckOwned()
+	if victor != 0 {
+		g.Turn = 20 + victor
+	}
+
+	return g.Turn
 }
 
 // Returns the info of the game
