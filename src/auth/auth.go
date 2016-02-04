@@ -88,13 +88,13 @@ func getUniqueID() (uint, error) {
 	for collision != 0 {
 
 		id = uint(mrand.Int31n(65536))
-		err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id=?)", id).Scan(&collision)
+		err := db.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE userid=?)", id).Scan(&collision)
 		if err != nil {
 			return id, err
 		}
 		times++
 		if times > 20 {
-			return id, errors.New("Too many attempts to find a unique game ID")
+			return id, errors.New("Too many attempts to find a unique user ID")
 		}
 	}
 	return id, nil
@@ -139,14 +139,14 @@ func MakeUser(user, pass string) (uint, error) {
 
 func getUserID(user string) (uint, error) {
 	var userID uint
-	err := db.Db.QueryRow("SELECT id FROM users WHERE name=?", user).Scan(&userID)
+	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
 
 	return userID, err
 }
 
 func getSaltHash(userID uint) ([]byte, error) {
 	saltHashString := ""
-	err := db.Db.QueryRow("SELECT salthash FROM users WHERE id=?", userID).Scan(&saltHashString)
+	err := db.Db.QueryRow("SELECT salthash FROM users WHERE userid=?", userID).Scan(&saltHashString)
 	if err != nil {
 		return nil, err
 	}
