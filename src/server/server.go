@@ -6,34 +6,43 @@ import (
 	_ "github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"recaptcha"
 	"time"
 	"ws"
 )
 
 var requireAuth bool
 
+func Log(handler http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func Run(port int, disableAuth bool) {
 	//start := time.Now()
 	r := mux.NewRouter()
 	requireAuth = !disableAuth
+	recaptcha.ReadSecret("./creds/recaptcha.json", "www.marktai.com")
 
 	// user requests
-	r.HandleFunc("/login", login).Methods("POST")
-	r.HandleFunc("/verifySecret", verifySecret).Methods("POST")
-	r.HandleFunc("/users", makeUser).Methods("POST")
+	r.HandleFunc("/login", Log(login)).Methods("POST")
+	r.HandleFunc("/verifySecret", Log(verifySecret)).Methods("POST")
+	r.HandleFunc("/users", Log(makeUser)).Methods("POST")
 
 	// unauthorized requests
-	r.HandleFunc("/games", getAllGames).Methods("GET")
-	r.HandleFunc("/games/{ID}", getGame).Methods("GET")
+	// r.HandleFunc("/games", getAllGames).Methods("GET")
+	r.HandleFunc("/games/{ID}", getGame).Methods("GET") // only for backwards compatibility
 	r.HandleFunc("/games/{ID}/info", getGame).Methods("GET")
 	r.HandleFunc("/games/{ID}/board", getBoard).Methods("GET")
 	r.HandleFunc("/games/{ID}/string", getGameString).Methods("GET")
-	r.HandleFunc("/games/{ID}/ws", ws.ServeWs).Methods("GET")
+	r.HandleFunc("/games/{ID}/ws", Log(ws.ServeWs)).Methods("GET")
 
 	// authorized requests
-	r.HandleFunc("/games", makeGame).Methods("POST")
-	r.HandleFunc("/games/{ID}", makeGameMove).Methods("POST")
-	r.HandleFunc("/games/{ID}/move", makeGameMove).Methods("POST")
+	r.HandleFunc("/games", Log(makeGame)).Methods("POST")
+	r.HandleFunc("/games/{ID}", Log(makeGameMove)).Methods("POST") // only for backwards compatibility
+	r.HandleFunc("/games/{ID}/move", Log(makeGameMove)).Methods("POST")
 	r.HandleFunc("/users/{userID}/games", getUserGames).Methods("GET")
 
 	for {

@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"recaptcha"
 	"strings"
 	"ws"
 )
@@ -25,8 +26,14 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 
 	player2, err := stringtoUint(r.FormValue("Player2"))
 	if err != nil {
-		WriteError(w, errors.New("Error parsing Player2 form value"), 400)
-		return
+		player2Username := r.FormValue("Player2")
+		if player2Username != "" {
+			player2, err = auth.GetUserID(player2Username)
+		}
+		if err != nil {
+			WriteError(w, errors.New("Error parsing Player2 form value"), 400)
+			return
+		}
 	}
 
 	starter, err := stringtoUint(r.FormValue("Starter"))
@@ -37,8 +44,9 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 		starter = 0
 	}
 
-	if starter > 3 {
+	if starter > 2 {
 		WriteError(w, errors.New("Starter must be 0-2"), 400)
+		return
 	}
 
 	if requireAuth {
@@ -56,8 +64,10 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 	switch starter {
 	case 0:
 		if rand.Intn(2) == 1 {
+			// log.Println("Same order")
 			break
 		}
+		// log.Println("Reversed order")
 		fallthrough
 	case 2:
 		player1, player2 = player2, player1
@@ -99,7 +109,13 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteJson(w, genMap("Game", game.GameInfo))
+	info, err := game.InfoWithNames()
+
+	if err != nil {
+		WriteError(w, err, 500)
+	}
+
+	WriteJson(w, genMap("Game", info))
 }
 
 func getBoard(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +242,26 @@ func makeUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if requireAuth {
+
+		recaptchaResponse, ok := parsedJson["Recaptcha"]
+		if !ok {
+			WriteErrorString(w, "No 'Recaptcha' set in POST body", 400)
+			return
+		}
+		verified, timestamp, hostname, err := recaptcha.Verify(recaptchaResponse)
+		if err != nil {
+			WriteError(w, err, 500)
+			return
+		}
+		if !verified {
+			WriteErrorString(w, "Recaptcha not verified successfully", 400)
+			return
+		}
+		_ = timestamp
+		_ = hostname
+	}
+
 	userID, err := auth.MakeUser(user, pass)
 	if err != nil {
 		WriteError(w, err, 500)
@@ -326,6 +362,7 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 	userID, err := stringtoUint(vars["userID"])
 	if err != nil {
 		WriteError(w, err, 400)
+		return
 	}
 
 	if requireAuth {

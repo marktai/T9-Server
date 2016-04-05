@@ -5,3 +5,4 @@ main
 log.txt
 *.swp
 golang.org
+creds

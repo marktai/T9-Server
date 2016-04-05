@@ -1,6 +1,7 @@
 package game
 
 import (
+	"auth"
 	"database/sql"
 	"db"
 	"errors"
@@ -21,6 +22,11 @@ type GameInfo struct {
 	MoveHistory MoveHistory
 	Started     time.Time
 	Modified    time.Time
+}
+
+type GameInfoWithNames struct {
+	GameInfo
+	PlayerNames [2]string
 }
 
 // GameInfo and a Board
@@ -124,6 +130,19 @@ func (g *Game) CheckVictor() uint {
 // Returns the info of the game
 func (g *Game) Info() GameInfo {
 	return g.GameInfo
+}
+
+func (g *Game) InfoWithNames() (GameInfoWithNames, error) {
+	var gi GameInfoWithNames
+	gi.GameInfo = g.Info()
+	for i, playerid := range gi.Players {
+		var err error
+		gi.PlayerNames[i], err = auth.GetUsername(playerid)
+		if err != nil {
+			return gi, err
+		}
+	}
+	return gi, nil
 }
 
 // Prints info about the game and the board
@@ -270,7 +289,7 @@ func GetUserGames(userID uint) ([]uint, error) {
 		return nil, err
 	} //TODO: handle NULLS
 
-	var ids []uint
+	ids := make([]uint, 0)
 
 	rows, err := db.Db.Query("SELECT gameid FROM games WHERE player0=? OR player1=?", userID, userID)
 	if rows != nil {
@@ -290,7 +309,6 @@ func GetUserGames(userID uint) ([]uint, error) {
 	if err := rows.Err(); err != nil {
 		return ids, err
 	}
-
 	return ids, nil
 
 }

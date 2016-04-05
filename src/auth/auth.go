@@ -14,12 +14,15 @@ import (
 	//	mrand "math/rand"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var secretMap = make(map[uint]*Secret)
+
+const BADCHARS = "[^a-zA-Z0-9_]"
 
 type Secret struct {
 	value      *big.Int
@@ -101,7 +104,7 @@ func getUniqueID() (uint, error) {
 	}
 
 	conflict := true
-	for conflict {
+	for conflict || newID == 0 {
 		count += 1
 		newID = (count*scale + addConst) % 65536
 
@@ -124,10 +127,44 @@ func getUniqueID() (uint, error) {
 	return newID, nil
 }
 
+// returns the userid of a user
+func GetUserID(user string) (uint, error) {
+	var userID uint
+	if bad, err := regexp.MatchString(BADCHARS, user); err != nil {
+		return 0, err
+	} else if bad {
+		return 0, errors.New("Invalid user name")
+	}
+	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
+}
+
+// returns the username of a user
+func GetUsername(userID uint) (string, error) {
+	var username string
+
+	err := db.Db.QueryRow("SELECT name FROM users WHERE userid=?", userID).Scan(&username)
+	if err != nil {
+		return "", err
+	}
+
+	return username, nil
+}
+
 // makes a new user and returns its id
 func MakeUser(user, pass string) (uint, error) {
-	_, err := GetUserID(user)
-	if err == nil {
+
+	// username santization in GetUserID
+	userID, err := GetUserID(user)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		// if there is an error
+		// does not include error when user is not found
+		return 0, err
+	} else if userID != 0 {
 		return 0, errors.New("User already made")
 	}
 
@@ -147,7 +184,7 @@ func MakeUser(user, pass string) (uint, error) {
 		return 0, err
 	}
 
-	addUser, err := db.Db.Prepare("INSERT INTO users VALUES(?, ?, ?)")
+	addUser, err := db.Db.Prepare("INSERT INTO users (userid, name, salthash) VALUES(?, ?, ?)")
 	if err != nil {
 		return 0, err
 	}
@@ -160,14 +197,6 @@ func MakeUser(user, pass string) (uint, error) {
 
 	return id, nil
 
-}
-
-// returns the userid of a user
-func GetUserID(user string) (uint, error) {
-	var userID uint
-	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
-
-	return userID, err
 }
 
 // returns the salthash of a user
@@ -184,6 +213,7 @@ func getSaltHash(userID uint) ([]byte, error) {
 // if a successful login, generates a secret or refreshes the existing one
 func Login(user, pass string) (uint, *Secret, error) {
 
+	// username santization in GetUserID
 	userID, err := GetUserID(user)
 	if err != nil {
 		return 0, nil, err
@@ -215,6 +245,8 @@ func Login(user, pass string) (uint, *Secret, error) {
 
 // if the user and secret are correct, refreshes the secret
 func VerifySecret(user, inpSecret string) (uint, *Secret, error) {
+
+	// username santization in GetUserID
 	userID, err := GetUserID(user)
 	if err != nil {
 		return 0, nil, err
@@ -244,8 +276,12 @@ func ComputeHmac256(message, key string) []byte {
 // CheckMAC reports whether messageHMAC is a valid HMAC tag for message.
 func checkMAC(key, message string, messageHMAC []byte) bool {
 	expectedMAC := ComputeHmac256(message, key)
-	log.Println("key", key, "message", message, "expected", expectedMAC, "received", messageHMAC)
-	return hmac.Equal(messageHMAC, expectedMAC)
+	equal := hmac.Equal(messageHMAC, expectedMAC)
+	if !equal {
+		log.Println("key:", key, "\nmessage:", message, "\nexpected:", expectedMAC, "\nreceived:", messageHMAC)
+	}
+
+	return equal
 }
 
 // returns userID, message used to generate HMAC, and HMAC from request
@@ -326,8 +362,9 @@ func AuthRequest(r *http.Request, userID uint) (bool, error) {
 
 	delay := int64(timeInt) - time.Now().Unix()
 
-	// rejects if times are more than 10 seconds apart
-	if delay < -10 || delay > 10 {
+	// rejects if times are more than 30 seconds apart
+	// used to be 10, but sometimes had authentication rejects because of it
+	if delay < -30 || delay > 30 {
 		return false, errors.New("Time difference too large")
 	}
 
