@@ -245,12 +245,17 @@ func GetAllGames() ([]uint, error) {
 	err := db.Db.Ping()
 	if err != nil {
 		return nil, err
-	} //TODO: handle NULLS
+	}
 
-	var games idModifiedSlice
+	games := make(idModifiedSlice, 0)
 
 	rows, err := db.Db.Query("SELECT gameid, modified FROM games")
-	defer rows.Close()
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
 	for rows.Next() {
 		var tempgameactual idModified
 		tempgame := &tempgameactual
@@ -274,7 +279,7 @@ func GetAllGames() ([]uint, error) {
 	}
 	sort.Sort(games)
 
-	var ids []uint
+	ids := make([]uint, 0)
 
 	for _, tempgame := range games {
 		ids = append(ids, tempgame.id)
@@ -289,9 +294,9 @@ func GetUserGames(userID uint) ([]uint, error) {
 		return nil, err
 	} //TODO: handle NULLS
 
-	ids := make([]uint, 0)
+	games := make(idModifiedSlice, 0)
 
-	rows, err := db.Db.Query("SELECT gameid FROM games WHERE player0=? OR player1=?", userID, userID)
+	rows, err := db.Db.Query("SELECT gameid, modified FROM games WHERE player0=? OR player1=?", userID, userID)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -299,16 +304,40 @@ func GetUserGames(userID uint) ([]uint, error) {
 		return nil, err
 	}
 	for rows.Next() {
-		var id uint
-		if err := rows.Scan(&id); err != nil {
-			return ids, err
+		var tempgameactual idModified
+		tempgame := &tempgameactual
+		var modified string
+		if err := rows.Scan(&(tempgame.id), &modified); err != nil {
+			return nil, err
 		}
-		ids = append(ids, id)
+		//golang constant thingy
+		//reference time is "Mon Jan 2 15:04:05 -0700 MST 2006"
+		const sqlForm = "2006-01-02 15:04:05"
+
+		tempgame.modified, err = time.Parse(sqlForm, modified)
+		if err != nil {
+			return nil, err
+		}
+		games = append(games, tempgame)
+
+		// var id uint
+		// if err := rows.Scan(&id); err != nil {
+		// 	return games, err
+		// }
+		// games = append(games, id)
 	}
+	sort.Sort(games)
 
 	if err := rows.Err(); err != nil {
-		return ids, err
+		return nil, err
 	}
+
+	ids := make([]uint, 0)
+
+	for _, tempgame := range games {
+		ids = append(ids, tempgame.id)
+	}
+
 	return ids, nil
 
 }
