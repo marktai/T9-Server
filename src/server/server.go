@@ -27,9 +27,9 @@ func Run(port int, disableAuth bool) {
 	recaptcha.ReadSecret("./creds/recaptcha.json", "www.marktai.com")
 
 	// user requests
-	r.HandleFunc("/login", Log(login)).Methods("POST")
-	r.HandleFunc("/verifySecret", Log(verifySecret)).Methods("POST")
-	r.HandleFunc("/users", Log(makeUser)).Methods("POST")
+	// r.HandleFunc("/login", Log(login)).Methods("POST")
+	// r.HandleFunc("/verifySecret", Log(verifySecret)).Methods("POST")
+	// r.HandleFunc("/users", Log(makeUser)).Methods("POST")
 
 	// unauthorized requests
 	// r.HandleFunc("/games", getAllGames).Methods("GET")

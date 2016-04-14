@@ -2,18 +2,14 @@ package server
 
 import (
 	"auth"
-	"encoding/json"
 	"fmt"
 	"game"
 	"github.com/gorilla/mux"
 	// "io/ioutil"
-	"encoding/base64"
 	"errors"
 	"log"
 	"math/rand"
 	"net/http"
-	"recaptcha"
-	"strings"
 	"ws"
 )
 
@@ -50,7 +46,14 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requireAuth {
-		authed, err := auth.AuthRequest(r, player1)
+
+		timeInt, path, messageHMACString, encoding, err := auth.ExtractAuthParamsNoUser(r)
+		if err != nil {
+			WriteError(w, err, 400)
+			return
+		}
+
+		authed, err := auth.CheckAuthParams(player1, timeInt, path, messageHMACString, encoding)
 		if err != nil || !authed {
 			if err != nil {
 				log.Println(err)
@@ -181,7 +184,14 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requireAuth {
-		authed, err := auth.AuthRequest(r, player)
+
+		timeInt, path, messageHMACString, encoding, err := auth.ExtractAuthParamsNoUser(r)
+		if err != nil {
+			WriteError(w, err, 400)
+			return
+		}
+
+		authed, err := auth.CheckAuthParams(player, timeInt, path, messageHMACString, encoding)
 		if err != nil || !authed {
 			if err != nil {
 				log.Println(err)
@@ -215,147 +225,6 @@ func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func makeUser(w http.ResponseWriter, r *http.Request) {
-
-	secret := r.FormValue("Secret")
-	if secret != "thisisatotallysecuresecret" {
-		WriteErrorString(w, "Sorry, you can't make a user now", 500)
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	var parsedJson map[string]string
-	err := decoder.Decode(&parsedJson)
-	if err != nil {
-		WriteError(w, err, 400)
-		return
-	}
-
-	user, ok := parsedJson["User"]
-	if !ok {
-		WriteErrorString(w, "No 'User' set in POST body", 400)
-		return
-	}
-	pass, ok := parsedJson["Password"]
-	if !ok {
-		WriteErrorString(w, "No 'Password' set in POST body", 400)
-		return
-	}
-
-	if requireAuth {
-
-		recaptchaResponse, ok := parsedJson["Recaptcha"]
-		if !ok {
-			WriteErrorString(w, "No 'Recaptcha' set in POST body", 400)
-			return
-		}
-		verified, timestamp, hostname, err := recaptcha.Verify(recaptchaResponse)
-		if err != nil {
-			WriteError(w, err, 500)
-			return
-		}
-		if !verified {
-			WriteErrorString(w, "Recaptcha not verified successfully", 400)
-			return
-		}
-		_ = timestamp
-		_ = hostname
-	}
-
-	userID, err := auth.MakeUser(user, pass)
-	if err != nil {
-		WriteError(w, err, 500)
-		return
-	}
-
-	WriteJson(w, genMap("UserID", userID))
-
-}
-
-func login(w http.ResponseWriter, r *http.Request) {
-
-	var parsedJson map[string]string
-	if encodedAuth := r.Header.Get("Authorization"); encodedAuth != "" {
-		authBytes, err := base64.StdEncoding.DecodeString(encodedAuth)
-		if err != nil {
-			//ERROR
-		}
-		auth := string(authBytes[:])
-		if strings.Count(auth, ":") != 1 {
-			// ERROR
-		}
-		authSlice := strings.Split(auth, ":")
-
-		parsedJson = make(map[string]string)
-		parsedJson["User"] = authSlice[0]
-		parsedJson["Password"] = authSlice[1]
-	} else {
-
-		decoder := json.NewDecoder(r.Body)
-
-		err := decoder.Decode(&parsedJson)
-		if err != nil {
-			WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
-			return
-		}
-	}
-
-	user, ok := parsedJson["User"]
-	if !ok {
-		WriteErrorString(w, "No 'User' set in POST body", 400)
-		return
-	}
-	pass, ok := parsedJson["Password"]
-	if !ok {
-		WriteErrorString(w, "No 'Password' set in POST body", 400)
-		return
-	}
-
-	userID, secret, err := auth.Login(user, pass)
-	if err != nil {
-		// hides details about server from login attempts"
-		log.Println(err)
-		WriteErrorString(w, "User and password combination incorrect", 401)
-		return
-	}
-
-	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64(), "Expiration": secret.ExpirationUTC()}
-	WriteJson(w, retMap)
-}
-
-func verifySecret(w http.ResponseWriter, r *http.Request) {
-
-	decoder := json.NewDecoder(r.Body)
-	var parsedJson map[string]string
-	err := decoder.Decode(&parsedJson)
-	if err != nil {
-		WriteErrorString(w, err.Error()+" in parsing POST body (JSON)", 400)
-		return
-	}
-
-	user, ok := parsedJson["User"]
-	if !ok {
-		WriteErrorString(w, "No 'User' set in POST body", 400)
-		return
-	}
-	inpSecret, ok := parsedJson["Secret"]
-	if !ok {
-		WriteErrorString(w, "No 'Secret' set in POST body", 400)
-		return
-	}
-
-	userID, secret, err := auth.VerifySecret(user, inpSecret)
-	if err != nil {
-		// hides details about server from login attempts"
-		log.Println(err)
-		WriteErrorString(w, "User and secret combination incorrect", 401)
-		return
-	}
-
-	retMap := map[string]string{"UserID": fmt.Sprintf("%d", userID), "Secret": secret.Base64(), "Expiration": secret.ExpirationUTC()}
-	WriteJson(w, retMap)
-}
-
 func getUserGames(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
@@ -367,9 +236,14 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 
 	if requireAuth {
 
-		authed, err := auth.AuthRequest(r, userID)
-		if err != nil || !authed {
+		timeInt, path, messageHMACString, encoding, err := auth.ExtractAuthParamsNoUser(r)
+		if err != nil {
+			WriteError(w, err, 400)
+			return
+		}
 
+		authed, err := auth.CheckAuthParams(userID, timeInt, path, messageHMACString, encoding)
+		if err != nil || !authed {
 			if err != nil {
 				log.Println(err)
 			}
@@ -377,7 +251,6 @@ func getUserGames(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	games, err := game.GetUserGames(userID)
 
 	if err != nil {
