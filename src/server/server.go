@@ -3,8 +3,8 @@ package server
 import (
 	"fmt"
 	"github.com/gorilla/mux"
-	_ "github.com/gorilla/websocket"
 	"log"
+	"math/rand"
 	"net/http"
 	"recaptcha"
 	"time"
@@ -22,6 +22,8 @@ func Log(handler http.HandlerFunc) http.HandlerFunc {
 
 func Run(port int, disableAuth bool) {
 	//start := time.Now()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 	r := mux.NewRouter()
 	requireAuth = !disableAuth
 	recaptcha.ReadSecret("./creds/recaptcha.json", "www.marktai.com")
