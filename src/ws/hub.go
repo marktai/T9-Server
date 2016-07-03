@@ -16,8 +16,11 @@ type hub struct {
 	// Registered connections.
 	connections map[*connection]bool
 
-	// Inbound messages from the connections.
+	// Outbound messages from the connections.
 	broadcast chan []byte
+
+	// Outbound messages from the connections.
+	receive chan []byte
 
 	// Register requests from the connections.
 	register chan *connection
@@ -31,7 +34,8 @@ var hubMap = make(map[uint]*hub)
 func makeHub(i uint) *hub {
 
 	h := hub{
-		broadcast:   make(chan []byte),
+		broadcast:   make(chan []byte, 20),
+		receive:     make(chan []byte, 20),
 		register:    make(chan *connection),
 		unregister:  make(chan *connection),
 		connections: make(map[*connection]bool),
@@ -86,13 +90,33 @@ func (h *hub) run() {
 			for c := range h.connections {
 				select {
 				case c.send <- m:
-					//log.Println("sending")
+					// log.Println("sending")
 				default:
-					log.Println("closing")
+					// log.Println("closing")
 					close(c.send)
 					delete(h.connections, c)
 				}
 			}
+		case r := <-h.receive:
+			eventMap := make(map[string]interface{})
+			err := json.Unmarshal(r, &eventMap)
+			if err != nil {
+				log.Println("websocket hub:", err.Error())
+				continue
+			}
+			if eventType, ok := eventMap["event"]; ok && eventType == "Chat-Client-Send" {
+				eventMap["event"] = "Chat-Server-Send"
+				r, err := json.Marshal(eventMap)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				log.Printf("Sending chat: %s", r)
+				h.broadcast <- r
+			} else {
+				log.Println("event not used:", string(r))
+			}
+
 		}
 	}
 }

@@ -24,7 +24,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 1024
 )
 
 func sameOrigin(r *http.Request) bool { return true }
@@ -55,18 +55,20 @@ func (c *connection) readPump() {
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.ws.ReadMessage()
+		messageType, message, err := c.ws.ReadMessage()
 		if err != nil {
-			break
+			log.Println(err)
+			return
 		}
-		c.h.broadcast <- message
+		c.h.receive <- message
+		log.Printf("received message of type %d: %s", messageType, message)
 	}
 }
 
 // write writes a message with the given message type and payload.
 func (c *connection) write(mt int, payload []byte) error {
 	c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-	log.Println("sent")
+	log.Printf("Wrote to pipe: %s", payload)
 	return c.ws.WriteMessage(mt, payload)
 }
 
@@ -85,10 +87,12 @@ func (c *connection) writePump() {
 				return
 			}
 			if err := c.write(websocket.TextMessage, message); err != nil {
+				log.Println(err)
 				return
 			}
 		case <-ticker.C:
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
+				log.Println(err)
 				return
 			}
 		}
@@ -128,4 +132,7 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	h.register <- c
 	go c.writePump()
 	c.readPump()
+
+	// only unregisters when readPump fails (ie: when the conn is closed)
+	h.unregister <- c
 }

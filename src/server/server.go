@@ -35,17 +35,17 @@ func Run(port int, disableAuth bool) {
 
 	// unauthorized requests
 	// r.HandleFunc("/games", getAllGames).Methods("GET")
-	r.HandleFunc("/games/{ID}", getGame).Methods("GET") // only for backwards compatibility
-	r.HandleFunc("/games/{ID}/info", getGame).Methods("GET")
-	r.HandleFunc("/games/{ID}/board", getBoard).Methods("GET")
-	r.HandleFunc("/games/{ID}/string", getGameString).Methods("GET")
-	r.HandleFunc("/games/{ID}/ws", Log(ws.ServeWs)).Methods("GET")
+	r.HandleFunc("/games/{ID:[0-9]+}", getGame).Methods("GET") // only for backwards compatibility
+	r.HandleFunc("/games/{ID:[0-9]+}/info", getGame).Methods("GET")
+	r.HandleFunc("/games/{ID:[0-9]+}/board", getBoard).Methods("GET")
+	r.HandleFunc("/games/{ID:[0-9]+}/string", getGameString).Methods("GET")
+	r.HandleFunc("/games/{ID:[0-9]+}/ws", Log(ws.ServeWs)).Methods("GET")
 
 	// authorized requests
 	r.HandleFunc("/games", Log(makeGame)).Methods("POST")
-	r.HandleFunc("/games/{ID}", Log(makeGameMove)).Methods("POST") // only for backwards compatibility
-	r.HandleFunc("/games/{ID}/move", Log(makeGameMove)).Methods("POST")
-	r.HandleFunc("/users/{userID}/games", getUserGames).Methods("GET")
+	r.HandleFunc("/games/{ID:[0-9]+}", Log(makeGameMove)).Methods("POST") // only for backwards compatibility
+	r.HandleFunc("/games/{ID:[0-9]+}/move", Log(makeGameMove)).Methods("POST")
+	r.HandleFunc("/users/{userID:[0-9]+}/games", getUserGames).Methods("GET")
 
 	for {
 		log.Printf("Running at 0.0.0.0:%d\n", port)
