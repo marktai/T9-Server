@@ -6,7 +6,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"recaptcha"
 	"time"
 	"ws"
 )
@@ -26,7 +25,6 @@ func Run(port int, disableAuth bool) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	r := mux.NewRouter()
 	requireAuth = !disableAuth
-	recaptcha.ReadSecret("./creds/recaptcha.json", "www.marktai.com")
 
 	// user requests
 	// r.HandleFunc("/login", Log(login)).Methods("POST")
