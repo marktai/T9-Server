@@ -35,9 +35,9 @@ The HMAC uses (seconds in epoch):(path including initial / and without the T9) a
 
 I want to get all the games for user 54689, which is at https://www.marktai.com/T9/users/54689/games
 
-Secret = "G7lc+B73JZnRQAYL0h15b4MvMZADllCleJtdJApSBJrq9x9kTm94FdOhnd31LttH995jbYeH7h5qP1W8WO1zng=="
-Path = /users/54689/games
-Time-Sent = 1472274995
+* Secret = "G7lc+B73JZnRQAYL0h15b4MvMZADllCleJtdJApSBJrq9x9kTm94FdOhnd31LttH995jbYeH7h5qP1W8WO1zng=="
+* Path = /users/54689/games
+* Time-Sent = 1472274995
 
 This results in "1472274995:/users/54689/games" as the message, and the secret is "G7lc+B73JZnRQAYL0h15b4MvMZADllCleJtdJApSBJrq9x9kTm94FdOhnd31LttH995jbYeH7h5qP1W8WO1zng=="
 
