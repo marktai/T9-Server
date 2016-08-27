@@ -57,6 +57,9 @@ func getUniqueID() (uint, error) {
 		count += 1
 		newID = (count*scale + addConst) % 65536
 		conflict, err = checkIDConflict(newID)
+		if newID == 0 {
+			continue
+		}
 		if err != nil {
 			return 0, err
 		}

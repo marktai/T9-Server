@@ -20,7 +20,7 @@ func GetUserID(user string) (uint, error) {
 	} else if bad {
 		return 0, errors.New("Invalid user name")
 	}
-	err := db.Db.QueryRow("SELECT userid FROM users WHERE name=?", user).Scan(&userID)
+	err := db.Db.QueryRow("SELECT userid FROM auth.users WHERE name=?", user).Scan(&userID)
 	if err != nil {
 		return 0, err
 	}
@@ -32,7 +32,7 @@ func GetUserID(user string) (uint, error) {
 func GetUsername(userID uint) (string, error) {
 	var username string
 
-	err := db.Db.QueryRow("SELECT name FROM users WHERE userid=?", userID).Scan(&username)
+	err := db.Db.QueryRow("SELECT name FROM auth.users WHERE userid=?", userID).Scan(&username)
 	if err != nil {
 		return "", err
 	}

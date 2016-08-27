@@ -83,7 +83,7 @@ func makeGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteJson(w, genMap("ID", game.GameID))
+	WriteJson(w, genMap("GameID", game.GameID))
 }
 
 func getAllGames(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func getAllGames(w http.ResponseWriter, r *http.Request) {
 
 func getGame(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := stringtoUint(vars["ID"])
+	id, err := stringtoUint(vars["GameID"])
 	if err != nil {
 		WriteError(w, err, 400)
 		return
@@ -123,7 +123,7 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 
 func getBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := stringtoUint(vars["ID"])
+	id, err := stringtoUint(vars["GameID"])
 	if err != nil {
 		WriteError(w, err, 400)
 		return
@@ -141,7 +141,7 @@ func getBoard(w http.ResponseWriter, r *http.Request) {
 
 func getGameString(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := stringtoUint(vars["ID"])
+	id, err := stringtoUint(vars["GameID"])
 	if err != nil {
 		WriteError(w, err, 400)
 		return
@@ -159,7 +159,7 @@ func getGameString(w http.ResponseWriter, r *http.Request) {
 
 func makeGameMove(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := stringtoUint(vars["ID"])
+	id, err := stringtoUint(vars["GameID"])
 	if err != nil {
 		WriteError(w, err, 400)
 		return
