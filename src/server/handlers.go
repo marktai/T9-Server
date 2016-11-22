@@ -116,6 +116,7 @@ func getGame(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		WriteError(w, err, 500)
+		return
 	}
 
 	WriteJson(w, genMap("Game", info))
